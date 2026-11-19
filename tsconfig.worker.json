@@ -5,6 +5,7 @@
     "lib": ["es2024"],
     "module": "esnext",
     "moduleResolution": "bundler",
+    "resolveJsonModule": true,
     "types": [],
     "strict": true,
     "noEmit": true,

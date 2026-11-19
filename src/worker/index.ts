@@ -5,6 +5,7 @@ import { isLocalHost, publicOrigin } from "./auth/session";
 import { findAgentByToken } from "./db/agents";
 import { pruneMessages } from "./db/messages";
 import { ensureSchema } from "./db/migrate";
+import { runUpgradeTasks } from "./core/upgrade-tasks";
 import { handleMcp } from "./mcp/handler";
 
 const app = createApp();
@@ -56,9 +57,10 @@ export default {
       return renderMessagePage("Finish setup", "Set APP_SECRET to a random value of 32 or more characters: bunx wrangler secret put APP_SECRET", 500);
     }
     await ensureSchema(env.DB);
+    ctx.waitUntil(runUpgradeTasks(env));
     return providerFor(publicOrigin(request, env)).fetch(request, env, ctx);
   },
   async scheduled(_controller, env, ctx) {
-    ctx.waitUntil(ensureSchema(env.DB).then(() => pruneMessages(env.DB, Date.now() - RETENTION_MS)));
+    ctx.waitUntil(ensureSchema(env.DB).then(() => Promise.all([pruneMessages(env.DB, Date.now() - RETENTION_MS), runUpgradeTasks(env)])));
   },
 } satisfies ExportedHandler<Env>;
