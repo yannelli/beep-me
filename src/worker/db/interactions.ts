@@ -9,6 +9,8 @@ export interface NewInteraction {
   channelKind: ChannelKind;
   /** The notification this answers. null when Beep Me cannot match it; the dashboard still shows it. */
   messageId: string | null;
+  /** Set when the channel knows the agent without a message, for example a per-agent email address. Else taken from the message. */
+  agentId?: string | null;
   kind: InteractionKind;
   text: string | null;
   optionIndex: number | null;
@@ -41,7 +43,7 @@ export async function recordInteraction(db: D1Database, input: NewInteraction): 
   const row = await db
     .prepare(
       `INSERT INTO interactions (id, user_id, message_id, agent_id, channel_id, channel_kind, kind, text, option_index, media, sender, provider_ref, created_at)
-       VALUES (?, ?, ?, (SELECT agent_id FROM messages WHERE id = ?), ?, ?, ?, ?, ?, ?, ?, ?, ?)
+       VALUES (?, ?, ?, COALESCE(?, (SELECT agent_id FROM messages WHERE id = ?)), ?, ?, ?, ?, ?, ?, ?, ?, ?)
        ON CONFLICT (channel_id, provider_ref) DO NOTHING
        RETURNING id, agent_id`,
     )
@@ -49,6 +51,7 @@ export async function recordInteraction(db: D1Database, input: NewInteraction): 
       randomId("int"),
       input.userId,
       input.messageId,
+      input.agentId ?? null,
       input.messageId,
       input.channelId,
       input.channelKind,
