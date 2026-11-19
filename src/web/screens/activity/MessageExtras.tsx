@@ -30,7 +30,7 @@ function Interaction({ item }: { item: InteractionDTO }) {
     <li className="space-y-2 rounded-xl border border-line bg-raised/50 p-3">
       <p className="flex items-center gap-2 text-xs text-muted">
         <Icon className="size-3.5" aria-hidden />
-        {item.sender ?? "You"} · {item.channelName ?? CHANNEL_CATALOG[item.channelKind].name} · {dateTime(item.createdAt)}
+        {item.sender ?? "You"} · {item.matchedBy === "dashboard" ? "Beep Me" : (item.channelName ?? CHANNEL_CATALOG[item.channelKind].name)} · {dateTime(item.createdAt)}
       </p>
       {item.matchedBy === "latest" && <p className="text-xs text-muted">Beep Me matched this to the newest message on that chat that waited for an answer.</p>}
       {text && <p className="text-[15px] break-words whitespace-pre-wrap">{text}</p>}

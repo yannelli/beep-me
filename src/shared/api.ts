@@ -173,7 +173,7 @@ export interface InteractionDTO {
   agentId: string | null;
   channelId: string;
   channelKind: ChannelKind;
-  /** null when the channel was deleted. */
+  /** null when the channel was deleted, or when the answer came from the dashboard (matchedBy "dashboard"). */
   channelName: string | null;
   kind: InteractionKind;
   /** null when Beep Me could not tie the answer to a message. */

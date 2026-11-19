@@ -181,7 +181,7 @@ export function toInteractionDTO(row: InteractionRow, mediaBase = "/api/media"):
     agentId: row.agent_id,
     channelId: row.channel_id,
     channelKind: row.channel_kind,
-    channelName: row.channel_name ?? null,
+    channelName: row.matched_by === "dashboard" ? null : (row.channel_name ?? null),
     kind: row.kind,
     matchedBy: row.matched_by,
     text: row.text,

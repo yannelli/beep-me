@@ -210,7 +210,7 @@ curl "https://your-beep-me.example/v1/replies?message_id=msg_123&wait_seconds=30
 }
 ```
 
-`channelName` is the name of the channel the answer came from, or `null` when you deleted the channel. `matchedBy` is how Beep Me tied the answer to the message: `reply`, `button`, `reaction`, `latest`, `address`, `dashboard`, or `null`. See [How answers are matched](/docs/agents/replies#how-answers-are-matched).
+`channelName` is the name of the channel the answer came from. It is `null` when you deleted the channel, or when the answer came from the dashboard. `matchedBy` is how Beep Me tied the answer to the message: `reply`, `button`, `reaction`, `latest`, `address`, `dashboard`, or `null`. See [How answers are matched](/docs/agents/replies#how-answers-are-matched).
 
 Files the user sent come from `GET /v1/media/<interaction id>/<index>` with the same token. Only the agent that sent the original message can read them.
 

@@ -18,7 +18,7 @@ Each answer has:
 - `kind`: `reply` (text), `choice` (an option), `reaction` (an emoji), or `vote`.
 - `text`, `option` (`{ index, label }`), and `media` (files). `get_replies` also shows up to three small images inline.
 - `sender`: who answered, as the channel reports it. "Dashboard" means the Beep Me dashboard.
-- `from`: the channel id, name, and kind the answer arrived on, and `matched_by`.
+- `from`: where the answer arrived. `via` is `channel` (with the channel id, name, and kind) or `dashboard` (the channel fields are `null`). Also `matched_by`.
 - `in_reply_to`: the message it answers: `message_id`, `title`, `topic`, `sent_at`, and `sent_to` (every channel that message went to, including fallback sends). `null` when Beep Me could not tie it to a message.
 
 An answer can arrive on a different channel than the one you think of. A message sent to Telegram and to a text message can get its answer on either one, and a fallback send can get the answer too. They all carry the same `message_id`.

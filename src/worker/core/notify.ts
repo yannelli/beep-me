@@ -172,8 +172,11 @@ export async function notify(run: RunContext, user: User, sender: Sender, input:
   }
 
   const channels = await listChannels(env, user.id);
-  const picked = input.channels ? destinationsFor(channels, input.channels, input.topic_thread ? "topic" : "main") : null;
-  if (picked?.unknown.length) notes.push(`Beep Me found no channel named ${picked.unknown.map((ref) => `"${ref}"`).join(", ")}. list_channels shows the names.`);
+  const agentChannels = agent?.channelIds ? channels.filter((channel) => agent.channelIds!.includes(channel.id)) : channels;
+  const picked = input.channels ? destinationsFor(agentChannels, input.channels, input.topic_thread ? "topic" : "main") : null;
+  if (picked?.unknown.length) {
+    notes.push(`Beep Me found no channel named ${picked.unknown.map((ref) => `"${ref}"`).join(", ")} that this agent can use. list_channels shows them.`);
+  }
   const plan = planRoute({
     settings,
     channels,
@@ -224,16 +227,17 @@ export async function notify(run: RunContext, user: User, sender: Sender, input:
         messageId: message.id,
         origin,
         channels,
+        agentChannels,
         settingsSteps: settings.fallbacks[priority],
         agentSteps: input.fallbacks,
         now,
       });
   notes.push(...scheduled.notes);
   await finishMessage(env.DB, message.id, status, notes, plan.quiet);
-  const fired = await fireDueNow(env, scheduled.rows, now);
+  const fired = status === "failed" ? await fireDueNow(env, scheduled.rows, now) : [];
   notes.push(...fired.map((detail) => `Fallback: ${detail}`));
   const finalStatus = fired.length ? ((await getMessage(env.DB, user.id, message.id))?.status ?? status) : status;
-  const due = scheduled.rows.filter((row) => row.due_at > now);
+  const due = fired.length ? scheduled.rows.filter((row) => !(row.trigger_kind === "failed" && row.due_at <= now)) : scheduled.rows;
   if (due.length) notes.push(`${due.length} fallback step${due.length > 1 ? "s" : ""} will run if needed. cancel_fallbacks stops them.`);
   return result(finalStatus, {
     quiet: plan.quiet,

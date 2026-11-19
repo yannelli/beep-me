@@ -27,6 +27,8 @@ export interface ScheduleRequest {
   messageId: string;
   origin: string;
   channels: StoredChannel[];
+  /** The channels the agent may use. Agent steps match only these. */
+  agentChannels: StoredChannel[];
   /** The user's steps for the message priority. */
   settingsSteps: FallbackStep[];
   /** Steps the agent set on the message. They replace settingsSteps, and an empty list turns fallbacks off. */
@@ -48,8 +50,8 @@ export async function scheduleFallbacks(db: D1Database, request: ScheduleRequest
   const items: NewFallback[] = [];
   if (request.agentSteps) {
     for (const step of request.agentSteps) {
-      const { destinations, unknown } = destinationsFor(request.channels, step.channels, "main");
-      if (unknown.length) notes.push(`Fallback: Beep Me found no channel named ${unknown.map((ref) => `"${ref}"`).join(", ")}.`);
+      const { destinations, unknown } = destinationsFor(request.agentChannels, step.channels, "main");
+      if (unknown.length) notes.push(`Fallback: Beep Me found no channel named ${unknown.map((ref) => `"${ref}"`).join(", ")} that this agent can use.`);
       if (!destinations.length) continue;
       const priority = step.priority ?? null;
       items.push({ ...base, when: step.when, afterMinutes: step.after_minutes, destinations, priority, source: "agent", channelNames: names(request.channels, destinations) });
@@ -156,11 +158,11 @@ export async function fireFallback(env: Env, row: FallbackRow, now = Date.now())
   return detail;
 }
 
-/** Fires due steps right away, for example a failed step with 0 minutes. Others wait for the cron. Returns what each did. */
+/** Fires failed steps with 0 minutes right after the first send. Other steps wait for the cron, so receipts and answers can arrive. */
 export async function fireDueNow(env: Env, rows: FallbackRow[], now: number): Promise<string[]> {
   const details: string[] = [];
   for (const row of rows) {
-    if (row.due_at > now || !(await claimFallback(env.DB, row.id, now))) continue;
+    if (row.trigger_kind !== "failed" || row.due_at > now || !(await claimFallback(env.DB, row.id, now))) continue;
     details.push(await fireFallback(env, row, now).catch((error: unknown) => failRow(env, row, error)));
   }
   return details;

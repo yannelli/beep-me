@@ -200,7 +200,7 @@ Returns what the user sent back to this agent's notifications: text replies, cho
 | `replies` | array | Each has `id`, `message_id`, `kind` (`reply`, `choice`, `reaction`, `vote`), `text`, `option` (`index` and `label`), `media`, `channel`, `sender`, `created_at`, `from`, and `in_reply_to`. |
 | `waited_seconds` | number | How long Beep Me waited. |
 
-`from` has `channel_id`, `channel_name`, `channel_kind`, and `matched_by` for the channel the answer came from. `in_reply_to` has the `message_id`, `title`, `topic`, `sent_at`, and `sent_to` of the message it answers, or `null`. For each `matched_by` value, see [How answers are matched](/docs/agents/replies#how-answers-are-matched).
+`from` has `via` (`channel` or `dashboard`), `channel_id`, `channel_name`, `channel_kind`, and `matched_by`. For a dashboard answer, the channel fields are `null`. `in_reply_to` has the `message_id`, `title`, `topic`, `sent_at`, and `sent_to` of the message it answers, or `null`. For each `matched_by` value, see [How answers are matched](/docs/agents/replies#how-answers-are-matched).
 
 Each file in `media` has a `url` at `/v1/media/<id>/<index>` that takes the agent's token. Up to three images under 1.5 MB also come back as image content, so the agent sees them right away.
 

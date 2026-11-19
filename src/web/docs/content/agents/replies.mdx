@@ -37,7 +37,7 @@ Each answer from `get_replies` has `from` and `in_reply_to`:
 
 | Field | What it holds |
 | --- | --- |
-| `from` | `channel_id`, `channel_name`, and `channel_kind` of the channel the answer came from, and `matched_by`. |
+| `from` | `via` (`channel` or `dashboard`), then `channel_id`, `channel_name`, and `channel_kind` of the channel the answer came from (`null` for a dashboard answer), and `matched_by`. |
 | `in_reply_to` | The message it answers: `message_id`, `title`, `topic`, `sent_at`, and `sent_to` (each channel that got the message, including fallback sends). `null` when Beep Me could not tie the answer to a message. |
 
 `matched_by` tells how Beep Me tied the answer to the message:

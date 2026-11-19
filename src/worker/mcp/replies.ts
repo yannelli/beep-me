@@ -17,13 +17,14 @@ const replySchema = z.object({
   text: z.string().nullable(),
   option: z.object({ index: z.number(), label: z.string() }).nullable(),
   media: z.array(mediaSchema),
-  channel: z.enum(CHANNEL_KINDS),
+  channel: z.enum(CHANNEL_KINDS).nullable(),
   sender: z.string().nullable(),
   created_at: z.string(),
   from: z.object({
-    channel_id: z.string(),
+    via: z.enum(["channel", "dashboard"]),
+    channel_id: z.string().nullable(),
     channel_name: z.string().nullable(),
-    channel_kind: z.enum(CHANNEL_KINDS),
+    channel_kind: z.enum(CHANNEL_KINDS).nullable(),
     matched_by: z.enum(MATCHED_BY).nullable(),
   }),
   in_reply_to: z
@@ -82,19 +83,24 @@ export function registerReplyTools(server: McpServer, session: McpSession | unde
         limit: input.limit,
       });
       const messages = await answeredMessages(session.env.DB, batch.replies.flatMap((reply) => (reply.messageId ? [reply.messageId] : [])));
-      const replies = batch.replies.map((reply) => ({
+      const replies = batch.replies.map((reply) => {
+        const dashboard = reply.matchedBy === "dashboard";
+        return {
         id: reply.id,
         message_id: reply.messageId,
         kind: reply.kind,
         text: reply.text,
         option: reply.option,
         media: reply.media,
-        channel: reply.channelKind,
+        channel: dashboard ? null : reply.channelKind,
         sender: reply.sender,
         created_at: new Date(reply.createdAt).toISOString(),
-        from: { channel_id: reply.channelId, channel_name: reply.channelName, channel_kind: reply.channelKind, matched_by: reply.matchedBy },
+        from: dashboard
+          ? { via: "dashboard" as const, channel_id: null, channel_name: null, channel_kind: null, matched_by: reply.matchedBy }
+          : { via: "channel" as const, channel_id: reply.channelId, channel_name: reply.channelName, channel_kind: reply.channelKind, matched_by: reply.matchedBy },
         in_reply_to: (reply.messageId && messages.get(reply.messageId)) || null,
-      }));
+        };
+      });
       const lines = batch.replies.length
         ? batch.replies.map((reply) => describe(reply, reply.messageId ? messages.get(reply.messageId) : undefined))
         : [`No new replies after ${batch.waitedSeconds} seconds.`];

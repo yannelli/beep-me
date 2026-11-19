@@ -33,7 +33,7 @@ This loop calls the watch URL until an answer is ready, for up to 90 minutes. Af
 
 ```sh
 WATCH='<watch_url>'
-end=$((SECONDS+5400)); while [ $SECONDS -lt $end ]; do r=$(curl -fsS "$WATCH?wait_seconds=50") && case "$r" in *'"ready":true'*) echo "$r"; exit 0;; esac || sleep 15; done; echo "No answer after 90 minutes."; exit 2
+end=$((SECONDS+5400)); while [ $SECONDS -lt $end ]; do r=$(curl -fsS --max-time 70 "$WATCH?wait_seconds=50") && case "$r" in *'"ready":true'*) echo "$r"; exit 0;; esac || sleep 15; done; echo "No answer after 90 minutes."; exit 2
 ```
 
 | Exit code | Meaning |
