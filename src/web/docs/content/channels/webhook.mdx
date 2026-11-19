@@ -1,0 +1,178 @@
+The webhook channel sends each Beep Me message as a JSON `POST` request to a URL that you choose. Use it to connect Beep Me to your own app, a home automation system, or another service. With a signing secret, your server can check that each request comes from Beep Me. Quiet hours do not change webhook delivery.
+
+With automatic routes, a webhook gets a priority only when you have no other channel for it. To send messages to a webhook on purpose, add it to a route. See [Routes and rules](/docs/routing/routes-and-rules).
+
+## Before you start
+
+- An endpoint that accepts `POST` requests with a JSON body and answers with a 2xx status.
+- The endpoint URL must use `https://`. Beep Me also accepts `http://localhost` and `http://127.0.0.1` for local tests.
+
+## Set up a webhook
+
+<Steps>
+
+### Make a signing secret
+
+Make a long random string. For example, run this command:
+
+```sh
+openssl rand -hex 32
+```
+
+Save the string in your server's settings. Your server uses it to check each request.
+
+### Add the channel in Beep Me
+
+Open [Channels](/channels). Select **Add channel**. Select **Webhook**. Enter your endpoint in **URL**. Enter the string in **Signing secret**. Select **Add channel**.
+
+Beep Me does not call the URL when you save.
+
+### Send a test
+
+Select **Test**. Beep Me shows the HTTP status of your endpoint, for example "HTTP 200". The request has `"test": true`.
+
+</Steps>
+
+## Fields
+
+<ChannelFields kind="webhook" />
+
+## The request
+
+```http
+POST /hooks/beep-me HTTP/1.1
+Host: example.com
+Content-Type: application/json
+User-Agent: BeepMe/0.1
+X-BeepMe-Timestamp: 1763481600
+X-BeepMe-Signature: sha256=<64 hex characters>
+```
+
+```json
+{
+  "event": "notification",
+  "id": "msg_4kR9vQ2mXp7LcT1z",
+  "title": "Deploy failed",
+  "body": "The migration step timed out after 10 minutes.",
+  "priority": "high",
+  "topic": { "key": "api", "name": "api" },
+  "url": "https://example.com/run/42",
+  "agent": { "id": "agt_8sN3wY6bHq0JdF5e", "name": "Claude Code" },
+  "silent": false,
+  "test": false,
+  "createdAt": 1763481599874
+}
+```
+
+| Field | Type | Value |
+| --- | --- | --- |
+| `event` | string | Always `"notification"`. |
+| `id` | string | The message ID. Beep Me sends the same ID again when it retries. |
+| `title` | string or null | The title from the agent. `null` when the agent sent no title. |
+| `body` | string | The message text from the agent. Beep Me does not shorten it. |
+| `priority` | string | `"low"`, `"medium"`, `"high"`, or `"urgent"`. |
+| `topic` | object or null | `key` is the topic in lowercase. `name` is the topic as the agent wrote it. |
+| `url` | string or null | The link from the agent. |
+| `agent` | object | `name` is the agent name. `id` is `null` for test messages and messages from Beep Me itself. |
+| `silent` | boolean | `false` for webhook channels. |
+| `test` | boolean | `true` for the **Test** button. |
+| `createdAt` | number | When Beep Me got the message, in Unix milliseconds. |
+
+The headers:
+
+- `X-BeepMe-Timestamp` is the time of sending, in Unix seconds.
+- `X-BeepMe-Signature` is present only when you set a **Signing secret**.
+
+## Check the signature
+
+Beep Me computes an HMAC-SHA256 with your signing secret over this string:
+
+```text
+<X-BeepMe-Timestamp>.<raw request body>
+```
+
+The header value is `sha256=` and the result in lowercase hex. To check a request:
+
+1. Read the raw body as bytes. Do not parse and serialize the JSON first.
+2. Compute the HMAC over the timestamp, a period, and the raw body.
+3. Compare the result with the header in constant time.
+4. Reject old requests. The examples allow 5 minutes.
+
+<Tabs>
+
+<Tab label="Node.js">
+
+```js title="verify-beep-me.mjs"
+import { createHmac, timingSafeEqual } from "node:crypto";
+
+export function verifyBeepMe(rawBody, headers, secret, toleranceSeconds = 300) {
+  const timestamp = headers["x-beepme-timestamp"];
+  const signature = headers["x-beepme-signature"] ?? "";
+  if (!timestamp || Math.abs(Date.now() / 1000 - Number(timestamp)) > toleranceSeconds) return false;
+  const expected = `sha256=${createHmac("sha256", secret).update(`${timestamp}.${rawBody}`).digest("hex")}`;
+  return signature.length === expected.length && timingSafeEqual(Buffer.from(signature), Buffer.from(expected));
+}
+```
+
+Pass the raw body as a string or a `Buffer`. In Express, use `express.raw({ type: "application/json" })` on this route.
+
+</Tab>
+
+<Tab label="Python">
+
+```python title="verify_beep_me.py"
+import hashlib
+import hmac
+import time
+
+
+def verify_beep_me(raw_body: bytes, headers, secret: str, tolerance_seconds: int = 300) -> bool:
+    timestamp = headers.get("X-BeepMe-Timestamp", "")
+    signature = headers.get("X-BeepMe-Signature", "")
+    if not timestamp.isdigit() or abs(time.time() - int(timestamp)) > tolerance_seconds:
+        return False
+    message = timestamp.encode() + b"." + raw_body
+    expected = "sha256=" + hmac.new(secret.encode(), message, hashlib.sha256).hexdigest()
+    return hmac.compare_digest(signature, expected)
+```
+
+Pass the raw body as bytes, for example `request.get_data()` in Flask. The `headers` object must find names without regard to case.
+
+</Tab>
+
+</Tabs>
+
+## Delivery and retries
+
+- Beep Me counts any 2xx status as delivered. The delivery log shows the status, for example "HTTP 204".
+- Beep Me waits 10 seconds for your endpoint.
+- After a 429 or 5xx status, Beep Me sends the same request one more time. It waits for `Retry-After`, up to 3 seconds.
+- A retry has the same `id`, timestamp, and signature. Use `id` to ignore a request that you already handled.
+- Beep Me does not retry after a timeout or a network error.
+
+## Troubleshooting
+
+| You see | What to do |
+| --- | --- |
+| "Enter a full URL." | Enter the URL with `https://` and the host name. |
+| "Use an https URL." | Use `https://`. Only `localhost` and `127.0.0.1` can use `http://`. |
+| `HTTP 401`, `HTTP 404`, or another status | Your endpoint answered with this status. Check the endpoint logs. |
+| "Request timed out after 10 s" | Your endpoint did not answer in 10 seconds. Answer first, then do slow work. |
+| "Request network error" | Beep Me could not connect. Check the host name and the TLS certificate. |
+| Your server rejects the signature | Use the raw body and the same secret. Check that your server clock is correct. |
+
+For other problems, see [Troubleshooting](/docs/reference/troubleshooting).
+
+## Next steps
+
+<Cards>
+
+<Card href="/docs/routing/routes-and-rules" title="Routes and rules">
+Send some priorities or topics to your webhook.
+</Card>
+
+<Card href="/docs/reference/security" title="Security">
+Learn how Beep Me stores keys and signs requests.
+</Card>
+
+</Cards>

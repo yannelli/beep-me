@@ -1,0 +1,185 @@
+Find the message or symptom you see, then follow the fix. Each heading quotes the text that Beep Me shows.
+
+For any message, open it in **Activity**. The notes and the delivery details explain each decision that Beep Me made.
+
+## Setup and sign-in
+
+### "Finish setup"
+
+Every page shows **Finish setup** and this text:
+
+```text
+Set APP_SECRET to a random value of 32 or more characters: npx wrangler secret put APP_SECRET
+```
+
+`APP_SECRET` is missing or shorter than 32 characters. Run this command:
+
+```sh
+openssl rand -hex 32 | npx wrangler secret put APP_SECRET
+```
+
+### "Set up Google sign-in"
+
+The sign-in page shows **Set up Google sign-in** in place of **Continue with Google**. The Worker does not have `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`.
+
+1. Follow the steps on the sign-in page. The page shows the redirect URI for this deployment.
+2. Run `npx wrangler secret put GOOGLE_CLIENT_ID`.
+3. Run `npx wrangler secret put GOOGLE_CLIENT_SECRET`.
+4. Run `npm run deploy`. Then reload the page.
+
+You can also run `npm run setup` again. It asks for the allowed emails again. It also asks for the Google client ID and secret when they are missing.
+
+### Google shows a redirect URI error
+
+The redirect URI in your Google OAuth client does not match the deployment address. Add this URI to **Authorized redirect URIs** exactly:
+
+```text
+https://your-beep-me.example/auth/google/callback
+```
+
+If you use a custom domain, set `PUBLIC_URL` and use that domain in the URI. See [Configuration](/docs/reference/configuration#public_url).
+
+### "is not allowed to sign in to this Beep Me"
+
+The page says **Sign-in did not finish** and `you@example.com is not allowed to sign in to this Beep Me.`
+
+Your account is not in `ALLOWED_EMAILS`. Add it to the list in `wrangler.jsonc`, then run `npm run deploy`. If the list is empty, only the first account that signed in can use Beep Me. See [ALLOWED_EMAILS](/docs/reference/configuration#allowed_emails).
+
+### "This sign-in link expired. Start again from Beep Me."
+
+The Google sign-in took more than 10 minutes, or it finished in a different browser. Open Beep Me. Select **Continue with Google** again.
+
+### "Your Google email address is not verified."
+
+Beep Me accepts only Google accounts with a verified email address. Verify the address in your Google account, or use a different account.
+
+## Connecting agents
+
+### "Sign in first"
+
+The approval page says `Your Beep Me session ended. Start the connection again from your app.` Sign in to Beep Me in the same browser. Then start the connection again from the client.
+
+### "This app could not be verified"
+
+The page says `Beep Me could not read the app's metadata. Try again later.` The client uses a Client ID Metadata Document, and Beep Me could not fetch it. Try again later. If the client offers dynamic client registration, use that.
+
+### "This request cannot continue"
+
+The client sent an authorization request that Beep Me cannot accept. The page shows the reason from the OAuth server. Remove the server from the client. Then add it again.
+
+### Calls fail after a revoke or a new address
+
+The client gets HTTP 401. One of these is true:
+
+- You revoked the agent.
+- You rotated the agent's token.
+- You changed the deployment address. Beep Me binds each OAuth token to the MCP URL where the client got it.
+
+Reconnect the client. In Claude Code, run `/mcp`. Sign in again. For a token agent, create a new token on the [Agents](/agents) screen.
+
+### Claude cannot connect to a local server
+
+Claude on the web, desktop, and mobile connects from Anthropic's servers. It cannot reach `localhost`. Use Claude Code to test locally, or deploy Beep Me first. See [Local development](/docs/local-development#connect-claude-code-to-the-local-server).
+
+## REST API
+
+### "Missing or revoked agent token. Create one in Beep Me under Agents."
+
+HTTP 401. Check these items:
+
+- The header is `Authorization: Bearer beep_...`.
+- The shell set `$BEEPME_TOKEN`. Run `echo $BEEPME_TOKEN` to check.
+- The agent is not revoked, and you did not rotate its token.
+- You used an agent token. OAuth tokens work only on `/mcp`.
+
+### "Invalid notification"
+
+HTTP 400. The `fields` object names each field that failed:
+
+```json
+{ "error": "Invalid notification", "fields": { "message": "This field is required." } }
+```
+
+- `message` must have 1 to 4000 characters.
+- `url` must start with `http://` or `https://`. Otherwise the error is `Use an http or https URL.`
+- `priority` must be `low`, `medium`, `high`, or `urgent`.
+
+### The message shows raw JSON
+
+You sent JSON without `Content-Type: application/json`. Beep Me then reads the whole body as plain text. Add `-H "Content-Type: application/json"` to the curl command.
+
+## Delivery
+
+### Nothing arrived
+
+Open the message in **Activity** and read its status and notes.
+
+| Status | What to do |
+| --- | --- |
+| `paused` | Delivery is paused. Resume it in [Settings](/settings). |
+| `muted` | The agent, the topic, or a rule muted the message. Quiet hours can also hold a text. Read the note. |
+| `throttled` | The agent went over its message cap. See [Limits and repeats](/docs/routing/limits). |
+| `collapsed` | The message matched an earlier one. The earlier message shows the count. |
+| `failed` | Each channel failed, or no channel could take the message. Read each delivery's detail. |
+
+### "No channel could take this message."
+
+The full note is `No channel could take this message. Connect a channel or check this agent's channel access.`
+
+- Add a channel on the [Channels](/channels) screen, or turn on a channel that is off.
+- Finish the channel's setup. For example, link the Telegram chat.
+- Open the agent on the [Agents](/agents) screen. Check that it can use at least one channel on the route.
+
+### "Beep Me lowered the priority"
+
+The note is `Beep Me lowered the priority from High to Medium, the limit for this agent.` The agent asked for a priority above its highest priority. Change the limit on the agent's page.
+
+### "Text limit reached"
+
+The note is `Text limit reached (5 per hour for this agent).` The agent sent more texts this hour than its text cap allows. Beep Me sent the message to the next route down when one exists. See [Limits and repeats](/docs/routing/limits).
+
+### "Quiet hours: Beep Me held the text."
+
+The full note is `Quiet hours: Beep Me held the text. No other channel can take this message, so Beep Me sent nothing.` During quiet hours, Beep Me skips texts below the break-through level. Add a channel that does not send texts, for example Telegram or ntfy. See [Quiet hours](/docs/routing/quiet-hours).
+
+### "does not offer STARTTLS"
+
+The SMTP detail is `smtp.example.com does not offer STARTTLS. Beep Me did not send your password. Use SSL/TLS on port 465.` Change the channel to SSL/TLS on port 465. See [SMTP](/docs/channels/smtp).
+
+### "Google token refresh failed"
+
+The Gmail channel cannot get a new access token. If your Google app is in Testing status, Google ends the refresh token after 7 days. See [Gmail](/docs/channels/gmail).
+
+### "Beep Me could not send to"
+
+The detail is, for example, `Beep Me could not send to Telegram. Check the Worker logs.` The channel code hit an unexpected error. Run `npx wrangler tail` and send a test to see the error.
+
+### Text messages stay at "sent"
+
+Delivery receipts need an `https` deployment. On `http://localhost`, Beep Me does not ask the provider for receipts.
+
+## Local development
+
+### The Telegram chat does not link
+
+On an `http` address, Beep Me cannot set a Telegram webhook. The channel test shows `Webhook not set because http://localhost:5173 is not https.` While a link waits, the dashboard reloads the channel every 2 seconds. Each time, Beep Me asks Telegram for new messages. Keep the channel page open after you tap **Start** in Telegram.
+
+If the same bot also runs on a deployed Beep Me, it has a webhook. Telegram does not return updates to `getUpdates` while a webhook is set ([Telegram Bot API](https://core.telegram.org/bots/api#getupdates)). Use a separate bot for local development.
+
+### "Continue as developer" does not show
+
+The button shows only when `DEV_LOGIN=true` is in `.dev.vars` and the address is `localhost`, `127.0.0.1`, or `[::1]`. Restart `npm run dev` after you change `.dev.vars`.
+
+## Next steps
+
+<Cards>
+
+<Card href="/docs/routing/delivery-log" title="Delivery log">
+Read each message's status, deliveries, and notes.
+</Card>
+
+<Card href="/docs/reference/configuration" title="Configuration">
+Check your secrets and variables.
+</Card>
+
+</Cards>

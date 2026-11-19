@@ -1,0 +1,7 @@
+# Copy to .dev.vars for local development.
+APP_SECRET=change-me-to-a-long-random-string-at-least-32-chars
+# Shows a "Continue as developer" button on localhost so you can skip Google during development.
+DEV_LOGIN=true
+# Optional for local development, required in production.
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=

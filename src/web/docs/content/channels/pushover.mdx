@@ -1,0 +1,96 @@
+Pushover sends Beep Me messages as push notifications to the Pushover app on your phone. Each Beep Me priority maps to a Pushover priority. Urgent messages use Pushover's emergency priority, which repeats the alert until you acknowledge it.
+
+With automatic routes, Urgent messages go to your first phone push channel. Pushover also gets High messages when you have no text message channel, and Medium messages when you have no Telegram. See [Which messages each channel gets](/docs/channels#which-messages-each-channel-gets).
+
+## Before you start
+
+- A Pushover account, and the Pushover app on your phone. See [pushover.net](https://pushover.net/).
+
+## Set up Pushover
+
+<Steps>
+
+### Copy your user key
+
+Sign in to the [Pushover dashboard](https://pushover.net/dashboard). Copy your user key.
+
+### Create an application
+
+Open [Create an application](https://pushover.net/apps/build). Name it "Beep Me". Create the application. Copy the API token of the application.
+
+### Add the channel in Beep Me
+
+Open [Channels](/channels). Select **Add channel**. Select **Pushover**. Paste the API token in **App token**. Paste the user key in **User key**. Select **Add channel**.
+
+Beep Me checks the keys with Pushover. Pushover must find an active device for the user key.
+
+### Send a test
+
+Select **Test**. A notification with the title "Beep Me · Test from Beep Me" appears on your phone.
+
+</Steps>
+
+## Fields
+
+<ChannelFields kind="pushover" />
+
+Enter a device name in **Device** to send to one device only. Use the name of the device in your Pushover account.
+
+## Priorities
+
+| Beep Me priority | Pushover priority | During quiet hours |
+| --- | --- | --- |
+| Low | -1 (low) | -2 (lowest) |
+| Medium | 0 (normal) | -2 (lowest) |
+| High | 1 (high) | -1 (low), when quiet hours apply to High |
+| Urgent | 2 (emergency) | 2 (emergency) |
+
+Pushover describes these priorities on its [API page](https://pushover.net/api):
+
+- `-2` makes no notification. On iPhone, the app badge count goes up.
+- `-1` shows a notification without sound or vibration.
+- `0` uses the sound and alert settings of your device.
+- `1` always plays a sound, also during the quiet hours that you set in Pushover.
+- `2` works like 1 and repeats until you acknowledge it.
+
+Quiet hours in Beep Me do not apply to the breakthrough priority and above. Urgent is always at or above it. See [Quiet hours](/docs/routing/quiet-hours).
+
+### Emergency alerts
+
+For Urgent messages, Beep Me tells Pushover to send the alert again every 60 seconds for up to 30 minutes. Acknowledge the alert in the Pushover app to stop it. After 30 minutes, Pushover stops the repeats and keeps the message.
+
+## How messages look
+
+- The notification title has the agent name and the message title, for example `Claude Code · Deploy failed`.
+- The notification text has a line with the priority, the agent name, and the topic. The title, the body, and the link follow.
+- When the message has a web link of 512 characters or less, Pushover shows it as **Open link**.
+- Pushover shows the time when the agent sent the message.
+- The title can have 250 characters and the text 1,024. Beep Me shortens longer text.
+
+## Troubleshooting
+
+Beep Me shows Pushover errors as `Pushover: <error from Pushover>`.
+
+| You see | What to do |
+| --- | --- |
+| "App tokens have 30 characters." | Copy the API token of your application again. |
+| "User keys have 30 characters." | Copy the user key from the Pushover dashboard again. |
+| A Pushover error when you save | Pushover does not accept the token, the user key, or the device. Check all three. Install the app on at least one device. Sign in on that device. |
+| A Pushover error about the device | Check the device name in **Device**, or leave it empty. |
+| A Pushover error about your message limit | Your Pushover application used its messages for this month. |
+
+For other problems, see [Troubleshooting](/docs/reference/troubleshooting).
+
+## Next steps
+
+<Cards>
+
+<Card href="/docs/routing/quiet-hours" title="Quiet hours">
+Choose which priorities can make a sound at night.
+</Card>
+
+<Card href="/docs/routing/priorities" title="Priorities">
+Learn when an agent should send Urgent.
+</Card>
+
+</Cards>

@@ -1,0 +1,71 @@
+Each message has a priority. The priority picks the route, decides if the message breaks through quiet hours, and decides if a muted topic holds it. Use this page to choose a priority and to set a limit for each agent.
+
+## The four priorities
+
+<PriorityTable />
+
+An agent that does not set a priority sends Medium. The "Default route" column shows the automatic routes when you connect a text channel, a push channel, and Telegram with topic threads. [Routes and rules](/docs/routing/routes-and-rules) shows the full automatic routes for every set of channels.
+
+## What each priority changes
+
+| Priority | Breaks through quiet hours | Delivered in a muted topic |
+| --- | --- | --- |
+| Urgent | Yes | Yes |
+| High | Only when **These still make sound** is **High and urgent** | Yes |
+| Medium | No | No |
+| Low | No | No |
+
+During quiet hours, a message below the break-through level arrives without sound, and Beep Me skips text messages. See [Quiet hours](/docs/routing/quiet-hours).
+
+## Highest priority for an agent
+
+Each agent has a highest priority. When an agent asks for a higher priority, Beep Me lowers the message to the agent's highest priority. Beep Me then routes the message at the lower priority.
+
+The default highest priority is High. You set it on the approval page when an MCP client connects, or when you create a token. To change it later, open the agent in [Agents](/agents). Then select a level under **Highest priority**.
+
+When Beep Me lowers a message, the delivery log shows both priorities and adds this routing note:
+
+```text
+Beep Me lowered the priority from Urgent to High, the limit for this agent.
+```
+
+The highest priority also limits break-through. With the default break-through level of Urgent, an agent with a highest priority of High cannot break through quiet hours.
+
+## What Urgent adds
+
+Urgent is the only priority that breaks through quiet hours with the default settings. An Urgent message keeps its sound and goes to text channels at night.
+
+The automatic Urgent route sends to your first text channel and your first push channel together. Each other automatic route sends to one channel.
+
+Urgent does not get past these holds:
+
+- **Pause everything** in [Settings](/settings).
+- A muted agent.
+- The agent's message cap.
+- A rule with the action **Mute**.
+
+## Guidance for agents
+
+Beep Me gives MCP clients these instructions with the `notify` tool:
+
+- Use Urgent when the message needs action now.
+- Use High when the message is important and time sensitive.
+- Use Medium when the person reads it today. Medium is the default.
+- Use Low for background information.
+- Send one message for each event. Skip routine progress steps.
+
+Give an agent the lowest highest priority that suits its work. A nightly report job needs Medium. An on-call monitor needs Urgent.
+
+## Next steps
+
+<Cards>
+
+<Card href="/docs/routing/routes-and-rules" title="Routes and rules">
+Choose the channels for each priority.
+</Card>
+
+<Card href="/docs/agents/access" title="Agent access">
+Set the highest priority and channels for each agent.
+</Card>
+
+</Cards>

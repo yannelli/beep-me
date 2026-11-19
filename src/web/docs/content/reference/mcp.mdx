@@ -1,0 +1,189 @@
+This page lists what the Beep Me MCP server gives a client: the endpoint, sign-in, tools, prompt, and server instructions. Use it when you build a client or check what an agent sees.
+
+## Endpoint
+
+```text
+https://your-beep-me.example/mcp
+```
+
+| Property | Value |
+| --- | --- |
+| Transport | Streamable HTTP |
+| Server name | `beep-me` (title `Beep Me`, version `0.1.0`) |
+| Protocol versions | `2026-07-28`, and 2025 versions through a stateless fallback on the same URL |
+| Scope | `notify` |
+
+The server is stateless. Beep Me builds a new server for each request, so no session state carries between requests.
+
+Beep Me checks the `Origin` header. A request from an origin other than the deployment address or localhost gets HTTP 403.
+
+## Sign-in
+
+A client can sign in with OAuth, or send an agent token.
+
+### OAuth
+
+Beep Me is its own OAuth 2.1 authorization server, with PKCE. The client finds the endpoints from the metadata documents.
+
+| Endpoint | Path |
+| --- | --- |
+| Protected resource metadata | `/.well-known/oauth-protected-resource/mcp` |
+| Authorization server metadata | `/.well-known/oauth-authorization-server` |
+| Authorization | `/authorize` |
+| Token | `/oauth/token` |
+| Dynamic client registration | `/oauth/register` |
+
+Beep Me supports two ways for a client to identify itself:
+
+| Method | How it works | What the approval page shows |
+| --- | --- | --- |
+| Client ID Metadata Documents (CIMD) | The client ID is an `https` URL that holds the app's metadata. | `Published by <domain>.` |
+| Dynamic client registration (DCR) | The client registers at `/oauth/register`. | `This app registered itself, so Beep Me cannot confirm its name.` |
+
+| Token | Lifetime |
+| --- | --- |
+| Access token | 1 hour |
+| Refresh token | 90 days, and 90 days after its last use |
+
+Beep Me binds each token to the exact MCP URL where the client got it. If you change the deployment address, reconnect each OAuth agent.
+
+### Approval page
+
+Each OAuth connection opens an approval page. If you are not signed in to Beep Me, Beep Me asks you to sign in first. The page has these fields:
+
+| Field | What it sets |
+| --- | --- |
+| **Connect as** | Reconnect an existing agent from the same client, or select **A new agent**. This field shows only when the client already has an agent. |
+| **Agent name** | The name that every message shows. Up to 60 characters. |
+| **Highest priority** | The highest priority the agent can send. The default is **High**. Beep Me lowers higher requests to this level. |
+| **Channels it can use** | **Every channel, including ones you add later**, or **Only the channels I pick**. |
+
+Select **Allow** to create the agent. Select **Deny** to stop. When the redirect goes to an app on your computer, the page shows a warning.
+
+### Agent token
+
+Send a Beep Me agent token as a bearer token:
+
+```http
+Authorization: Bearer beep_...
+```
+
+Create the token on the [Agents](/agents) screen. A token agent skips the approval page. You set its name, highest priority, and channels when you create it.
+
+### Revoked agents
+
+Beep Me reads the agent from the database on every request. After you revoke an agent, its next request gets HTTP 401.
+
+## Tools
+
+### notify
+
+Sends a notification through the user's routes. Title: **Send notification**.
+
+| Input | Type | Required | Limits | Description |
+| --- | --- | --- | --- | --- |
+| `message` | string | Yes | 1 to 4000 characters | The notification body. |
+| `title` | string or null | No | Up to 200 characters | A short headline that leads with the outcome. |
+| `priority` | string | No | `low`, `medium`, `high`, `urgent` | Default `medium`. |
+| `topic` | string or null | No | Up to 64 characters | A project or subject name. Each topic gets its own thread. |
+| `url` | string or null | No | `http` or `https`, up to 2000 characters | A link to open. |
+| `dedupe_key` | string or null | No | Up to 200 characters | Messages with the same key inside the collapse window merge into one. |
+
+The output has the same fields as the REST response:
+
+| Output | Type | Description |
+| --- | --- | --- |
+| `id` | string | The message ID. For `collapsed`, the ID of the first message. |
+| `status` | string | `delivered`, `partial`, `failed`, `muted`, `throttled`, `paused`, or `collapsed`. |
+| `priority` | string | The priority Beep Me used, after the agent's cap. |
+| `requested_priority` | string | The priority the agent asked for. |
+| `topic` | string or null | The topic name. |
+| `quiet` | boolean | `true` when quiet hours applied. |
+| `repeat_count` | number | The count of identical messages, including this one. |
+| `deliveries` | array | `channel`, `kind`, `target`, `ok`, and `detail` for each channel. |
+| `notes` | string array | Plain sentences about each routing decision. |
+
+For the meaning of each status, see [Status values](/docs/reference/rest-api#status-values).
+
+The text content is a short summary:
+
+```text
+Status: delivered. Priority: medium.
+Delivered to Telegram.
+```
+
+| Annotation | Value |
+| --- | --- |
+| `readOnlyHint` | `false` |
+| `destructiveHint` | `false` |
+| `idempotentHint` | `false` |
+| `openWorldHint` | `true` |
+
+### notification_status
+
+Looks up a notification that this agent sent. Title: **Check notification status**.
+
+| Input | Type | Required | Limits | Description |
+| --- | --- | --- | --- | --- |
+| `id` | string | Yes | 1 to 64 characters | The `id` that `notify` returned. |
+
+| Output | Type | Description |
+| --- | --- | --- |
+| `id` | string | The message ID. |
+| `status` | string | The message status. |
+| `priority` | string | The priority Beep Me used. |
+| `created_at` | string | ISO 8601 time. |
+| `repeat_count` | number | The count of identical messages. |
+| `deliveries` | array | `channel`, `target`, `status`, and `detail` for each channel. |
+| `notes` | string array | The routing notes. |
+
+Each delivery `status` is `pending`, `sent`, `delivered`, or `failed`. A text message changes to `delivered` or `failed` when the provider sends a delivery receipt. Receipts need an `https` deployment.
+
+An agent can read only its own messages. For any other ID, the tool returns an error result with the text `No notification <id> from this agent.`
+
+| Annotation | Value |
+| --- | --- |
+| `readOnlyHint` | `true` |
+| `openWorldHint` | `false` |
+
+## Prompt
+
+### notify-when-done
+
+Title: **Notify me when done**. It has one optional argument, `topic`.
+
+Without a topic, the prompt sends this text to the agent:
+
+```text
+When you finish the current task, call the Beep Me notify tool with priority medium, a title that states the outcome, and a short summary. Use the project name as the topic. If you get blocked or need my decision before then, notify me right away with priority high and say what you need.
+```
+
+With a topic, `Use the project name as the topic.` changes to `Use the topic "<topic>".`
+
+## Server instructions
+
+The server sends these instructions to each client when it connects:
+
+```text
+Beep Me sends your notifications to the user's phone, chat apps, and email.
+Call notify when a long task finishes or fails, when you are blocked and need a decision, when something urgent happens, or when the user asked you to report back.
+Skip routine progress steps. Send one message per event.
+Priorities: urgent needs action now and can break through quiet hours. high is important and time sensitive and usually arrives as a text message. medium is worth seeing today and is the default. low is background information and goes to the topic's thread.
+Set topic to a short project or subject name, such as the repository name. Each topic gets its own thread.
+Lead the title with the outcome. Keep message to a few sentences. Add url when there is a page to open.
+Beep Me applies the user's routing, quiet hours, and limits. The statuses collapsed, muted, paused, and throttled are normal results. Do not retry them.
+```
+
+## Next steps
+
+<Cards>
+
+<Card href="/docs/agents/claude-code" title="Claude Code">
+Connect Claude Code with one command.
+</Card>
+
+<Card href="/docs/agents/other-clients" title="Other MCP clients">
+Connect any client that supports remote servers.
+</Card>
+
+</Cards>

@@ -1,0 +1,114 @@
+Limits stop one agent when it sends too many messages. Beep Me caps text messages and total messages for each agent, and it collapses repeats into one message. Use this page to set the limits and to stop all delivery for a while.
+
+## Default limits
+
+Open [Routing](/routing). Find the **Limits** card. These values apply to each agent. Select **Save limits** after you change them.
+
+| Field | Default | Range |
+| --- | --- | --- |
+| **Texts per agent per hour** | 5 | 0 to 100 |
+| **Messages per agent per hour** | 60 | 1 to 1000 |
+| **Collapse window in minutes** | 10 | 0 to 1440 |
+
+Each hour is the 60 minutes before the message. Test messages and alerts from Beep Me have no agent, so the text cap and the message cap do not apply to them.
+
+## Text cap
+
+The text cap counts the text messages that Beep Me sent for one agent in the last 60 minutes. It counts sends that failed too. Set the cap to 0 to stop all texts from agents.
+
+When an agent is over the cap, Beep Me skips the text and sends to the fallbacks once:
+
+1. The next lower route that has a channel other than a text channel.
+2. When no lower route has one, the first channel you added that is not a text channel.
+
+The other destinations of the message still get it. The delivery log adds one of these notes:
+
+```text
+Text limit reached (5 per hour for this agent). Sent to Telegram instead.
+Text limit reached (5 per hour for this agent).
+```
+
+For example, you connect Twilio SMS, Pushover, and Telegram, and you use automatic routes. Urgent goes to Twilio SMS and Pushover. When the agent is over its text cap, an Urgent message goes to Pushover and the Telegram main chat. The Telegram main chat comes from the Medium route.
+
+## Message cap
+
+The message cap counts one agent's messages in the last 60 minutes. It does not count messages with the status **Over limit**, **Muted**, or **Paused**. It does not count repeats that Beep Me collapsed.
+
+When an agent is over the cap, Beep Me records the message as **Over limit** and does not deliver it. Beep Me does not send the message later. The delivery log adds this note:
+
+```text
+Rate limit reached: 60 messages per hour for CI. Beep Me held this message.
+```
+
+For the first message over the cap in an hour, Beep Me also sends you an alert. The alert is a Medium message from Beep Me with the title "CI hit its rate limit". It goes through your routes like any other message.
+
+## Limits for one agent
+
+Open the agent in [Agents](/agents). In the **Details** card, enter values in **Texts per hour** and **Messages per hour**. Select **Save changes**.
+
+Leave a field empty to use the default from the **Limits** card. The collapse window is the same for every agent.
+
+## Collapsed repeats
+
+When an agent sends the same message again inside the collapse window, Beep Me adds it to the first message. Beep Me does not deliver the repeat.
+
+Two messages are the same when they come from the same agent and have the same topic, title, and text. The priority and the URL do not count.
+
+Beep Me adds the repeat only to a message with the status **Delivered** or **Partly delivered**. The window starts at the first message and does not move with each repeat.
+
+For example, with a 10 minute window:
+
+| Time | Message | Result |
+| --- | --- | --- |
+| 09:00 | "Build failed" | Delivered |
+| 09:04 | "Build failed" | Added to the 09:00 message, ×2 |
+| 09:11 | "Build failed" | Delivered as a new message |
+
+Set the window to 0 to turn off collapse. Test messages are not collapsed.
+
+### What you see
+
+The first message in [Activity](/) shows a badge with the count, such as ×2. Its details show a **Repeats** row with the count and the time of the last repeat.
+
+In Telegram, Beep Me edits the first message and adds "Repeated ×2" at the end. Other channels do not change.
+
+The agent gets the status `collapsed` with the first message's id and `repeat_count`. Beep Me keeps the text of the first message.
+
+### Dedupe key
+
+An agent can send `dedupe_key` to set its own rule for "the same message". Two messages with the same agent and the same `dedupe_key` are the same, even when the text is different. Beep Me then ignores the topic, title, and text.
+
+```sh
+curl https://your-beep-me.example/v1/notify \
+  -H "Authorization: Bearer $BEEPME_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"message":"Disk on db1 is 91% full","priority":"high","dedupe_key":"disk-db1"}'
+```
+
+A repeat with a new text, such as "Disk on db1 is 94% full", does not reach you. Beep Me keeps the first text.
+
+## Pause everything
+
+Pause stops all delivery. Open [Settings](/settings). In the **Pause everything** card, select **1 hour** or **8 hours**.
+
+While Beep Me is paused, it records each message as **Paused** and does not deliver it. This includes Urgent messages, test messages, and alerts from Beep Me. Beep Me does not send paused messages later. The delivery log adds this note:
+
+```text
+Beep Me is paused until 9:00 PM. It sent nothing.
+```
+
+A banner in [Activity](/) shows the time the pause ends. To end the pause early, select **Resume** in the banner or in [Settings](/settings).
+
+## Next steps
+
+<Cards>
+
+<Card href="/docs/agents/access" title="Agent access">
+Mute or revoke one agent.
+</Card>
+
+<Card href="/docs/routing/delivery-log" title="Delivery log">
+See which messages Beep Me held.
+</Card>
+
+</Cards>

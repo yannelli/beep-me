@@ -1,0 +1,82 @@
+A topic groups related messages, such as all messages about one repository. Agents set the topic on each message. Beep Me uses topics for threads, mutes, and rules.
+
+## Topic names
+
+An agent sets the topic with the `topic` field. Scripts can also send the `X-Topic` header. See [MCP server](/docs/reference/mcp) and [REST API](/docs/reference/rest-api).
+
+Beep Me cleans each topic name before it uses it:
+
+- It removes spaces at the start and end, and it changes each group of spaces inside the name to one space.
+- It removes `#` from the start of the name.
+- It ignores case when it compares names.
+
+So `#Deploys`, `deploys`, and `DEPLOYS` are one topic. Beep Me shows the name from the first message that used the topic.
+
+A topic can have 64 characters at most. Beep Me rejects a longer topic as input that is not valid. A message with no topic, or with only `#`, has no topic.
+
+## The topic list
+
+Open [Routing](/routing). Find the **Topics** card. It lists your 200 most recent topics. Each row shows the message count and the time of the last message.
+
+A topic shows in the list after the first message that uses it. The count includes messages that Beep Me held.
+
+## Threads
+
+Two channels give each topic its own thread:
+
+| Channel | Thread |
+| --- | --- |
+| Telegram with topics turned on | A topic thread in your bot chat or in a forum group |
+| Discord with a forum channel | A forum post |
+
+Beep Me creates the thread for the first message in a topic and uses it again for later messages. When a thread is deleted, Beep Me creates a new one. For setup, see [Telegram](/docs/channels/telegram) and [Discord](/docs/channels/discord).
+
+Beep Me uses a thread only when the destination is the topic target: **Topic threads** for Telegram and **Forum posts** for Discord. With automatic routes, only Low uses topic threads. The other priorities go to a main target, with or without a topic.
+
+To send Medium messages to threads, edit the Medium route. Select Telegram **Topic threads** as a destination. See [Routes and rules](/docs/routing/routes-and-rules).
+
+## Mute a topic
+
+<Steps>
+
+### Find the topic
+
+Open [Routing](/routing). Find the topic in the **Topics** card.
+
+### Turn off delivery
+
+Turn off the switch next to the topic.
+
+</Steps>
+
+A muted topic holds Low and Medium messages. High and Urgent messages in the topic still go out. The topic row shows "muted".
+
+Beep Me records each held message as **Muted** and does not send it later. The delivery log adds this note:
+
+```text
+The topic "deploys" is muted. High and urgent messages still go out.
+```
+
+To turn delivery back on, turn on the switch again. To hold every priority in a topic, add a rule with the topic and the action **Mute**.
+
+## Topics in rules
+
+The **Topics** field of a rule takes patterns, separated by commas. `*` matches any text, and `?` matches one character. Case does not matter.
+
+A pattern must match the full topic name. `deploy*` matches `deploy` and `deploy-prod`. `deploy` matches only `deploy`. Do not start a pattern with `#`.
+
+A rule with topics does not match a message that has no topic. See [Rules](/docs/routing/routes-and-rules).
+
+## Next steps
+
+<Cards>
+
+<Card href="/docs/routing/routes-and-rules" title="Routes and rules">
+Send a topic to its own channel.
+</Card>
+
+<Card href="/docs/channels/telegram" title="Telegram">
+Turn on topic threads.
+</Card>
+
+</Cards>

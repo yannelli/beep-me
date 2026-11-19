@@ -1,0 +1,90 @@
+ntfy sends Beep Me messages as push notifications to the free ntfy app on your phone. You do not need an account or a key. With automatic routes, Urgent messages go to your first phone push channel. During quiet hours, ntfy messages arrive at the lowest priority.
+
+ntfy also gets High messages when you have no text message channel, and Medium messages when you have no Telegram. See [Which messages each channel gets](/docs/channels#which-messages-each-channel-gets).
+
+## Before you start
+
+- The ntfy app on your phone. Get it from Google Play, the App Store, or F-Droid. See [ntfy.sh](https://ntfy.sh/).
+
+## Set up ntfy
+
+<Steps>
+
+### Add the channel in Beep Me
+
+Open [Channels](/channels). Select **Add channel**. Select **ntfy push**. Beep Me fills in **Server** and a random **Topic name**, such as `beep-me-k3v9x2m7qa`. Keep the random name. Select **Add channel**.
+
+### Subscribe in the ntfy app
+
+Beep Me shows "Install the ntfy app on your phone. Then subscribe to this topic:" and the topic name. Copy the topic name. In the ntfy app, subscribe to that topic on the same server.
+
+### Send a test
+
+Select **Test**. A notification with the title "Test from Beep Me" appears on your phone.
+
+</Steps>
+
+## Fields
+
+<ChannelFields kind="ntfy" />
+
+## The topic name is the password
+
+ntfy.sh is open to everyone. Anyone who knows a topic name can read and send messages on that topic. Keep the random name that Beep Me makes, and do not share it. See [ntfy server access](https://docs.ntfy.sh/config/).
+
+To change the topic, enter a new **Topic name**. Select **Save changes**. Then subscribe to the new topic in the app. A topic name can have letters, numbers, dashes, and underscores, up to 64 characters.
+
+## Your own ntfy server
+
+Enter the address of your server in **Server**, for example `https://ntfy.example.com`. The address must use `https://`.
+
+If your server protects the topic, create an access token. Paste it in **Access token**. ntfy access tokens start with `tk_`. See [Access tokens](https://docs.ntfy.sh/config/).
+
+The iPhone app gets instant notifications from a self-hosted server only when the server sets `upstream-base-url`. See [iOS instant notifications](https://docs.ntfy.sh/config/).
+
+## How messages look
+
+- The notification title is the message title.
+- The notification text has a line with the priority, the agent name, and the topic. The title, the body, and the link follow.
+- Beep Me adds the topic as an ntfy tag. Test messages also get the `test_tube` tag.
+- When you tap the notification, ntfy opens the message link. When there is no web link, it opens the message in Beep Me on an `https://` deployment.
+- ntfy allows 4,096 bytes of text. Beep Me shortens longer text.
+
+Beep Me sets the ntfy priority from the Beep Me priority:
+
+| Beep Me priority | ntfy priority | During quiet hours |
+| --- | --- | --- |
+| Low | 2 (low) | 1 (min) |
+| Medium | 3 (default) | 1 (min) |
+| High | 4 (high) | 1 (min), when quiet hours apply to High |
+| Urgent | 5 (max) | 5 (max) |
+
+Quiet hours do not apply to the breakthrough priority and above. Urgent is always at or above it. See [Quiet hours](/docs/routing/quiet-hours) and [ntfy message priority](https://docs.ntfy.sh/publish/).
+
+## Troubleshooting
+
+Beep Me shows ntfy errors as `ntfy <HTTP status>: <message>`. Beep Me does not contact the server when you save.
+
+| You see | What to do |
+| --- | --- |
+| "Use letters, numbers, dashes, and underscores." | Remove spaces and other characters from **Topic name**. |
+| "Use an https URL." | Enter **Server** with `https://`. |
+| `ntfy 401` or `ntfy 403` | The topic is protected. Paste a valid token in **Access token**. |
+| `ntfy 429` | The server limits how often you can send. Wait, then try again. |
+| The test works but nothing arrives on the phone | Check that the app subscribes to the same topic on the same server. |
+
+For other problems, see [Troubleshooting](/docs/reference/troubleshooting).
+
+## Next steps
+
+<Cards>
+
+<Card href="/docs/channels/telegram" title="Telegram">
+Add a chat with a thread for each topic.
+</Card>
+
+<Card href="/docs/routing/quiet-hours" title="Quiet hours">
+Get push without sound at night.
+</Card>
+
+</Cards>

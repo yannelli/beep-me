@@ -1,0 +1,76 @@
+A channel is one place where Beep Me can reach you, such as a Telegram chat, your phone number, or an email inbox. Use this page to compare the channels and pick the first one to set up.
+
+## All channels
+
+<ChannelTable />
+
+Select a channel name to open its setup guide. Each guide goes from a new account to a test message on your phone.
+
+## Choose your first channel
+
+For the fastest first message, use ntfy or Telegram. Each one takes about a minute.
+
+- [ntfy](/docs/channels/ntfy) sends free phone push. You install the ntfy app and subscribe to a topic. You do not need an account or a key.
+- [Telegram](/docs/channels/telegram) gives you a chat with your own bot. It also gives you a thread for each topic and a **Mute** button on each message.
+
+Then add a text message channel ([Twilio](/docs/channels/twilio) or [Telnyx](/docs/channels/telnyx)) for urgent messages. Text messages cost money. To send texts to US numbers, you must register your number with the provider first.
+
+## Which messages each channel gets
+
+Until you edit your routes, Beep Me picks the channels for each priority from the channels you connect. For each priority, Beep Me uses the first ready channel in this list.
+
+| Priority | Channels, in order |
+| --- | --- |
+| Urgent | A text message channel and a phone push channel, both. If you have neither: Telegram, then Slack or Discord, then email, then webhook. |
+| High | Text message, phone push, Telegram, Slack or Discord, email, webhook. |
+| Medium | Telegram, phone push, Slack or Discord, email, webhook. |
+| Low | Telegram topic thread, Discord forum post, Telegram main chat, Slack or Discord, phone push, email, webhook. |
+
+Phone push is ntfy or Pushover. Email is Gmail, Resend, or SMTP. When you have two channels of the same kind, Beep Me uses the one you added first. To set the routes yourself, see [Routes and rules](/docs/routing/routes-and-rules).
+
+## Silent at night
+
+During [quiet hours](/docs/routing/quiet-hours), messages below the breakthrough priority arrive without sound. Only the channels with "Yes" in the **Silent at night** column can do this: Telegram, Discord, ntfy, and Pushover.
+
+Beep Me does not send text messages below the breakthrough priority during quiet hours. It sends the message to another connected channel instead. If no other channel is connected, Beep Me sends nothing and records the message in Activity.
+
+Email, Slack, and webhook channels get their messages as usual during quiet hours.
+
+## Topic threads
+
+An agent can add a topic to a message, such as a project name. Telegram and Discord can put each topic in its own thread. Low messages go to the topic thread when one is available. See [Topics](/docs/routing/topics).
+
+The other channels show the topic as a tag in the message, for example `#api`.
+
+## What every channel has in common
+
+- Each message shows the priority, the agent name, the topic, the title, the body, and the link.
+- The **Test** button sends a Medium message from "Beep Me" to that channel only. It does not use your routes or count toward the text cap.
+- Beep Me waits 10 seconds for the provider. It tries again once when the provider answers with HTTP 429 or a 5xx error.
+- When a send fails, Beep Me shows the provider's error text in three places. These are below the **Test** button, on the channel page as **Last error**, and in the [delivery log](/docs/routing/delivery-log).
+
+## Keys are encrypted
+
+Beep Me encrypts the keys and tokens for each channel before it stores them. After you save a key, the dashboard shows only its last four characters. To keep a saved key, leave its field empty when you edit the channel. See [Security](/docs/reference/security).
+
+## Next steps
+
+<Cards>
+
+<Card href="/docs/channels/ntfy" title="ntfy">
+Get free phone push in about a minute.
+</Card>
+
+<Card href="/docs/channels/telegram" title="Telegram">
+Get a bot chat with a thread for each topic.
+</Card>
+
+<Card href="/docs/routing/routes-and-rules" title="Routes and rules">
+Choose which channels get each priority.
+</Card>
+
+<Card href="/docs/routing/quiet-hours" title="Quiet hours">
+Keep your phone silent at night.
+</Card>
+
+</Cards>

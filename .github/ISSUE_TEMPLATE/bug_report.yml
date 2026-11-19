@@ -1,0 +1,30 @@
+name: Bug report
+description: Something does not work as the docs describe.
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you expected, and what you saw. Paste the exact error text or delivery log note.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: The release tag or commit you deployed, for example v0.1.0.
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options: [MCP server, REST API, Channels, Routing, Dashboard, Docs, Setup and deploy, Other]
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Remove tokens, keys, phone numbers, and email addresses.

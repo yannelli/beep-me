@@ -1,0 +1,116 @@
+The Gmail channel sends Beep Me messages as email from your own Gmail account. By default the email goes to that same address. With automatic routes, email gets a priority only when no channel higher in the list can take it. See [Which messages each channel gets](/docs/channels#which-messages-each-channel-gets).
+
+## Before you start
+
+You need a Gmail account. Beep Me can send in one of two ways:
+
+- **Connect with Google.** You sign in with Google and allow Beep Me to send email. Beep Me uses the Gmail API. You do not give Beep Me a password. This option shows only when the deployment has Google sign-in.
+- **Use an app password.** You create an app password in your Google account. Beep Me sends through Gmail's SMTP server. Use this when the deployment has no Google sign-in.
+
+## Connect with Google
+
+Beep Me asks Google for one Gmail permission, `gmail.send`. It lets Beep Me send email as you. It does not let Beep Me read your email.
+
+<Steps>
+
+### Turn on the Gmail API
+
+The person who deployed Beep Me does this one time. Open the Google Cloud project that has Beep Me's OAuth client. Open the [Gmail API page](https://console.cloud.google.com/apis/library/gmail.googleapis.com). Select **Enable**.
+
+### Publish the Google app
+
+In the same project, open **Google Auth Platform**. Open **Audience**. Select **Publish app**. Google stops the Gmail connection after 7 days while the app is in **Testing**. See [Keep Gmail connected](#keep-gmail-connected).
+
+### Connect your Google account
+
+Open [Channels](/channels). Select **Add channel**. Select **Gmail**. Select **Connect with Google**. Pick your Google account. Allow Beep Me to send email.
+
+Beep Me opens the channel page and shows "Gmail connected. Send a test to check it."
+
+### Choose where email goes
+
+Leave **Send to** empty to get email at your Gmail address. To use another address, enter it. Then select **Save changes**.
+
+### Send a test
+
+Select **Test**. An email with the subject `[Test] [Medium] Test from Beep Me · Beep Me` arrives in your inbox.
+
+</Steps>
+
+Google treats `gmail.send` as a sensitive scope. Until Google verifies the app, Google shows an [unverified app](https://support.google.com/cloud/answer/7454865) screen when you connect. See [Gmail API scopes](https://developers.google.com/workspace/gmail/api/auth/scopes).
+
+## Use an app password
+
+<Steps>
+
+### Create an app password
+
+Turn on [2-Step Verification](https://support.google.com/accounts/answer/185839) for your Google account. Open [App passwords](https://myaccount.google.com/apppasswords). Create an app password. Copy the 16 letters.
+
+### Add the channel in Beep Me
+
+Open [Channels](/channels). Select **Add channel**. Select **Gmail**. Select **Use an app password**. Fill in **Gmail address** and **App password**. Select **Add channel**.
+
+Beep Me removes the spaces in the app password. It does not check the password when you save.
+
+### Send a test
+
+Select **Test**. An email with the subject `[Test] [Medium] Test from Beep Me · Beep Me` arrives in your inbox.
+
+</Steps>
+
+Beep Me sends through `smtp.gmail.com` on port 465 with TLS. Google does not offer app passwords for work or school accounts, for Advanced Protection, or when 2-Step Verification uses only security keys. Google revokes your app passwords when you change your Google password. See [Sign in with app passwords](https://support.google.com/accounts/answer/185833).
+
+## Fields
+
+<ChannelFields kind="gmail" />
+
+You do not see **Connect with** in the form. Beep Me sets it from the button that you select.
+
+## How messages look
+
+The email comes from your Gmail address. The subject has the priority, the title, and the agent name:
+
+```text
+[High] Deploy failed · Claude Code
+```
+
+The email has an HTML part and a plain text part. The HTML part has a colored bar for the priority, a line with the priority, agent, and topic, then the title, body, and link. On an `https://` deployment, it ends with a **View in Beep Me** link. Email has no silent mode, so quiet hours do not change it.
+
+## Keep Gmail connected
+
+With **Connect with Google**, Beep Me keeps a refresh token from Google. Google stops a refresh token in these cases:
+
+- The Google app is in **Testing** status. The token stops after 7 days.
+- Nobody used the token for 6 months.
+- You changed your Google password.
+- Your account has more than 100 tokens for the same OAuth client. Google stops the oldest one.
+
+Beep Me then shows "Google access was revoked. Connect Gmail again." Open the channel page. Select **Connect Google again**. See [Using OAuth 2.0](https://developers.google.com/identity/protocols/oauth2).
+
+## Troubleshooting
+
+| You see | What to do |
+| --- | --- |
+| "Google access was revoked. Connect Gmail again." | Select **Connect Google again** on the channel page. If this happens every week, publish the Google app. |
+| "Google did not grant permission to send email. Try again and allow sending." | Connect again. On the Google screen, allow Beep Me to send email. |
+| "Sign in to Beep Me first, then connect Gmail." | Sign in to Beep Me. Then select **Connect with Google** again. |
+| `Gmail 403` and a message that the Gmail API is disabled | Turn on the Gmail API in the Google Cloud project. |
+| "App passwords have 16 letters." | Copy the full app password. Spaces are allowed. |
+| `Failed to plain authentication:` with code `535` | Gmail does not accept the app password. Create a new app password. Paste it in **App password**. |
+
+For other problems, see [Troubleshooting](/docs/reference/troubleshooting).
+
+## Next steps
+
+<Cards>
+
+<Card href="/docs/reference/configuration" title="Configuration">
+Set up Google sign-in for your deployment.
+</Card>
+
+<Card href="/docs/routing/routes-and-rules" title="Routes and rules">
+Send some priorities to email and others to your phone.
+</Card>
+
+</Cards>

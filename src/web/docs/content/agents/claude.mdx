@@ -1,0 +1,109 @@
+Add Beep Me to Claude as a custom connector. After you connect it, Claude can send you a message when it finishes a task or needs your decision. The connector works in Claude on the web, desktop, and mobile.
+
+<Callout type="note">
+
+Claude connects to Beep Me from Anthropic's servers. Beep Me must have a public `https` address. A `workers.dev` address works. `localhost` does not.
+
+</Callout>
+
+## Connect Claude
+
+<Steps>
+
+### Copy the MCP URL
+
+In Beep Me, open [Agents](/agents). Select **Connect**. On the **Claude** tab, copy the URL. It has this form:
+
+```text
+https://your-beep-me.example/mcp
+```
+
+### Add a custom connector
+
+In Claude, open **Customize** > **Connectors**. Select **+ Add**. Then select **Add custom connector**.
+
+### Enter the name and the URL
+
+Enter `Beep Me` as the name. Paste the MCP URL.
+
+### Keep the recommended sign-in options
+
+Keep **Use Claude's published identity (Recommended)**. Select **Add**.
+
+### Sign in to Beep Me
+
+Claude opens Beep Me in a browser window. If Beep Me asks you to sign in, select **Continue with Google**.
+
+### Approve the agent
+
+Beep Me shows the approval page. Set these fields:
+
+| Field | What to set |
+| --- | --- |
+| **Agent name** | The name that each message shows, for example `Claude`. |
+| **Highest priority** | The highest priority Claude can send. The default is **High**. |
+| **Channels it can use** | **Every channel, including ones you add later**, or **Only the channels I pick**. |
+
+Select **Allow**. Beep Me sends you back to Claude.
+
+</Steps>
+
+We checked these steps against the [Claude help center](https://support.claude.com/en/articles/11175166-get-started-with-custom-connectors-using-remote-mcp) on November 18, 2026. We have not tested them against a live Beep Me deployment.
+
+## Check that it works
+
+<Steps>
+
+### Ask Claude for a message
+
+Start a chat in Claude. Send this prompt:
+
+```text
+Send me a Beep Me notification that says the connector works.
+```
+
+Claude calls the `notify` tool.
+
+### Check your phone
+
+The message arrives on the route for its priority. The default priority is medium.
+
+### Check Activity
+
+In Beep Me, open **Activity**. The message shows the agent name that you set on the approval page. Select the message to see each delivery and the routing notes.
+
+</Steps>
+
+If nothing arrived, see [Troubleshooting](/docs/reference/troubleshooting#nothing-arrived).
+
+## Choose another sign-in method
+
+The **OAuth client** setting in Claude has more choices. Beep Me supports each one.
+
+| Choice in Claude | What Beep Me does |
+| --- | --- |
+| **Use Claude's published identity (Recommended)** | Beep Me reads Claude's Client ID Metadata Document. The approval page shows the publisher's domain. |
+| **Register automatically** | Claude registers itself with dynamic client registration. The approval page says that Beep Me cannot confirm the app's name. |
+| **Request headers** with **No sign in** | Claude sends a fixed header. Use `Authorization` with the value `Bearer beep_...`. Create the token on the **Scripts** tab. |
+
+With a token, Beep Me skips the approval page. You set the agent's name, priority, and channels when you create the token.
+
+## Reconnect or remove Claude
+
+When you connect Claude again, the approval page shows **Connect as**. Select **Reconnect** to keep the agent's history and limits. Select **A new agent** to start over.
+
+To stop Claude, open it on the [Agents](/agents) screen. Select **Revoke access**. Its next call fails. For more, see [Agent access](/docs/agents/access).
+
+## Next steps
+
+<Cards>
+
+<Card href="/docs/routing/priorities" title="Priorities">
+Learn which priority Claude should use, and where each one goes.
+</Card>
+
+<Card href="/docs/reference/mcp" title="MCP server">
+See the tools and the instructions that Claude gets.
+</Card>
+
+</Cards>

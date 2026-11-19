@@ -1,0 +1,118 @@
+Telnyx sends Beep Me messages as text messages (SMS) from your Telnyx number to your mobile phone. With automatic routes, Urgent and High messages go to your first text message channel. Beep Me keeps each text within two SMS segments.
+
+## Before you start
+
+- A Telnyx account. Sign up at [telnyx.com](https://telnyx.com/).
+- A Telnyx phone number that can send SMS. The number must belong to a messaging profile.
+- Your mobile number in international format, for example `+15557654321`.
+- For texts to US numbers: a registered 10DLC brand and campaign, or a verified toll-free number. See [US registration](#us-registration).
+
+## Set up Telnyx
+
+<Steps>
+
+### Assign your number to a messaging profile
+
+In the [Telnyx portal](https://portal.telnyx.com/), create a messaging profile. Assign your phone number to that profile.
+
+### Create an API key
+
+Open [API keys](https://portal.telnyx.com/#/api-keys) in the Telnyx portal. Create a key. Copy the key.
+
+### Register for US texts
+
+Skip this step if you send only to numbers outside the US. For US numbers, complete the registration that your number type needs. See [US registration](#us-registration).
+
+### Add the channel in Beep Me
+
+Open [Channels](/channels). Select **Add channel**. Select **Telnyx SMS**. Fill in **API key**, **From number**, and **Your mobile number**. Select **Add channel**.
+
+Beep Me checks the API key with Telnyx. It shows an error if Telnyx does not accept the key.
+
+### Send a test
+
+Select **Test**. You get this text:
+
+```text
+TEST Beep Me: Beep Me (Medium)
+Test from Beep Me
+This is a test for Telnyx SMS. If you can read it, this channel works.
+```
+
+</Steps>
+
+## Fields
+
+<ChannelFields kind="telnyx" />
+
+Leave **Messaging profile ID** empty unless Telnyx asks for it. See [Send a message](https://developers.telnyx.com/api-reference/messages/send-a-message).
+
+## How messages look
+
+```text
+Beep Me: Claude Code (High, #api)
+Deploy failed
+The migration step timed out after 10 minutes.
+https://example.com/run/42
+```
+
+The first line shows the agent name, the priority, and the topic. The title, the body, and the link follow.
+
+### Length and characters
+
+Beep Me keeps each text within two SMS segments:
+
+- Beep Me changes characters that the GSM-7 SMS alphabet does not have. Curly quotes become straight quotes. Dashes, `·`, and `•` become `-`. `…` becomes `...`, and `×` becomes `x`. Beep Me removes emoji.
+- When the whole text uses GSM-7, the limit is 306 units (two segments of 153). The characters `^ { } \ [ ~ ] |` and `€` use two units each.
+- When the text has other characters, such as Chinese or Cyrillic letters, the limit is 134 characters (two segments of 67).
+- A longer text ends with `...`. Beep Me keeps the link complete when the link uses half of the limit or less.
+
+## US registration
+
+You must register before you send texts to US numbers:
+
+- For a 10-digit number (10DLC), register a brand and a campaign. Telnyx says that since February 3, 2025, it blocks all unregistered 10DLC traffic. See the [Telnyx 10DLC FAQ](https://support.telnyx.com/en/articles/3679260-frequently-asked-questions-about-10dlc) and [Getting started with 10DLC](https://developers.telnyx.com/docs/messaging/10dlc).
+- For a toll-free number, submit toll-free verification in the Telnyx portal. See the [10DLC and toll-free compliance guide](https://support.telnyx.com/en/collections/3147004-10dlc-and-toll-free-text-messaging-compliance-guide).
+
+## Text cap
+
+Each agent can send 5 text messages per hour by default. After that, Beep Me sends the message to another channel instead. The delivery log shows, for example, "Text limit reached (5 per hour for this agent). Sent to Telegram instead." The **Test** button does not count toward the cap. See [Limits and repeats](/docs/routing/limits).
+
+## Quiet hours
+
+During quiet hours, Beep Me does not send texts below the breakthrough priority. It sends the message to another connected channel without sound. See [Quiet hours](/docs/routing/quiet-hours).
+
+## Delivery receipts
+
+On an `https://` deployment, Beep Me gives Telnyx a webhook URL for each text. Telnyx reports what happens to the text. The [delivery log](/docs/routing/delivery-log) then changes the status to delivered or failed. A failed text shows the reason from Telnyx, for example `Telnyx: <detail>`.
+
+On an `http://` address, such as local development, Beep Me does not ask for receipts.
+
+## Troubleshooting
+
+Beep Me shows Telnyx errors as `Telnyx <code>: <title>: <detail>`, with the text from Telnyx.
+
+| You see | What to do |
+| --- | --- |
+| "Paste the full API key." | Copy the whole key again from the API keys page. |
+| "Use international format, like +15551234567." | Enter the number with a `+` and the country code. |
+| A Telnyx error when you save | Telnyx does not accept the API key. Create a new key. Paste it in **API key**. |
+| A Telnyx error that names the messaging profile | Assign the **From number** to a messaging profile. If Telnyx asks for it, fill in **Messaging profile ID**. |
+| The text fails to a US number | Check your 10DLC or toll-free registration in the Telnyx portal. |
+| "Text limit reached" | The agent reached its text cap. Wait, or raise the cap on the agent's page. |
+
+For other problems, see [Troubleshooting](/docs/reference/troubleshooting).
+
+## Next steps
+
+<Cards>
+
+<Card href="/docs/routing/limits" title="Limits and repeats">
+Set how many texts each agent can send per hour.
+</Card>
+
+<Card href="/docs/routing/quiet-hours" title="Quiet hours">
+Choose which priorities can text you at night.
+</Card>
+
+</Cards>

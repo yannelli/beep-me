@@ -1,0 +1,126 @@
+Twilio sends Beep Me messages as text messages (SMS) from your Twilio number to your mobile phone. With automatic routes, Urgent and High messages go to your first text message channel. Beep Me keeps each text within two SMS segments.
+
+## Before you start
+
+- A Twilio account. Sign up at [twilio.com](https://www.twilio.com/try-twilio).
+- A Twilio phone number that can send SMS, or a Twilio Messaging Service.
+- Your mobile number in international format, for example `+15557654321`.
+- For texts to US numbers: an approved A2P 10DLC registration for a 10-digit number, or a verified toll-free number. See [US registration](#us-registration).
+
+<Callout type="note" title="Twilio trial accounts">
+
+A trial account sends texts only to phone numbers that you verify in Twilio. Twilio starts each trial text with "Sent from a Twilio Trial account". See [Twilio trial limits](https://help.twilio.com/articles/360036052753-Twilio-Free-Trial-Limitations).
+
+</Callout>
+
+## Set up Twilio
+
+<Steps>
+
+### Get your Account SID and Auth token
+
+Open the [Twilio Console](https://console.twilio.com/). Copy the **Account SID** and the **Auth Token** from the Console home page.
+
+### Get a sender
+
+Buy a phone number that can send SMS, or create a Messaging Service. Copy the number in international format, or copy the Messaging Service SID. A Messaging Service SID starts with `MG`.
+
+### Register for US texts
+
+Skip this step if you send only to numbers outside the US. For US numbers, complete the registration that your number type needs. See [US registration](#us-registration).
+
+### Add the channel in Beep Me
+
+Open [Channels](/channels). Select **Add channel**. Select **Twilio SMS**. Fill in **Account SID**, **Auth token**, **From**, and **Your mobile number**. Select **Add channel**.
+
+Beep Me checks your account with Twilio. It shows an error if Twilio does not accept the keys.
+
+### Send a test
+
+Select **Test**. You get this text:
+
+```text
+TEST Beep Me: Beep Me (Medium)
+Test from Beep Me
+This is a test for Twilio SMS. If you can read it, this channel works.
+```
+
+</Steps>
+
+## Fields
+
+<ChannelFields kind="twilio" />
+
+## How messages look
+
+```text
+Beep Me: Claude Code (High, #api)
+Deploy failed
+The migration step timed out after 10 minutes.
+https://example.com/run/42
+```
+
+The first line shows the agent name, the priority, and the topic. The title, the body, and the link follow.
+
+### Length and characters
+
+Beep Me keeps each text within two SMS segments:
+
+- Beep Me changes characters that the GSM-7 SMS alphabet does not have. Curly quotes become straight quotes. Dashes, `·`, and `•` become `-`. `…` becomes `...`, and `×` becomes `x`. Beep Me removes emoji.
+- When the whole text uses GSM-7, the limit is 306 units (two segments of 153). The characters `^ { } \ [ ~ ] |` and `€` use two units each.
+- When the text has other characters, such as Chinese or Cyrillic letters, the limit is 134 characters (two segments of 67).
+- A longer text ends with `...`. Beep Me keeps the link complete when the link uses half of the limit or less.
+
+## US registration
+
+You must register before you send texts to US numbers:
+
+- For a 10-digit number (10DLC), register a brand and a campaign for A2P 10DLC. Texts from an unregistered number fail with error 30034. See [A2P 10DLC](https://www.twilio.com/docs/messaging/compliance/a2p-10dlc).
+- A toll-free number is not part of A2P 10DLC. It needs toll-free verification. Texts from an unverified toll-free number fail with error 30032. See [error 30032](https://www.twilio.com/docs/api/errors/30032).
+
+Twilio says that 10DLC registration applies to individuals and hobbyists too.
+
+## Text cap
+
+Each agent can send 5 text messages per hour by default. After that, Beep Me sends the message to another channel instead. The delivery log shows, for example, "Text limit reached (5 per hour for this agent). Sent to Telegram instead." The **Test** button does not count toward the cap. See [Limits and repeats](/docs/routing/limits).
+
+## Quiet hours
+
+During quiet hours, Beep Me does not send texts below the breakthrough priority. It sends the message to another connected channel without sound. See [Quiet hours](/docs/routing/quiet-hours).
+
+## Delivery receipts
+
+On an `https://` deployment, Beep Me asks Twilio to report what happens to each text. The [delivery log](/docs/routing/delivery-log) then changes the status to delivered or failed. A failed text shows the Twilio error code, for example "Twilio error 30034".
+
+On an `http://` address, such as local development, Beep Me does not ask for receipts.
+
+## Troubleshooting
+
+| You see | What to do |
+| --- | --- |
+| "Account SIDs start with AC and have 34 characters." | Copy the Account SID again from the Console home page. |
+| "Paste the full auth token." | Copy the whole Auth Token again. |
+| "Use a number like +15551234567 or a Messaging Service SID (MG…)." | Enter **From** with a `+` and the country code, or as an `MG` SID. |
+| "Use international format, like +15551234567." | Enter your mobile number with a `+` and the country code. |
+| "Twilio 20003: ..." | Twilio does not accept the Account SID and Auth token. Copy both again. |
+| `Twilio account <name> is <status>.` | Beep Me sends only from an active account. Open the Twilio Console and fix the account. |
+| "Twilio 21608: ..." | Your trial account cannot text this number. Verify the number in Twilio, or upgrade the account. |
+| "Twilio error 30034" | Your 10-digit number has no approved A2P 10DLC campaign. Complete the registration. |
+| "Twilio error 30032" | Your toll-free number is not verified. Complete toll-free verification. |
+| "Text limit reached" | The agent reached its text cap. Wait, or raise the cap on the agent's page. |
+
+For other Twilio codes, see the [Twilio error list](https://www.twilio.com/docs/api/errors).
+
+## Next steps
+
+<Cards>
+
+<Card href="/docs/routing/limits" title="Limits and repeats">
+Set how many texts each agent can send per hour.
+</Card>
+
+<Card href="/docs/routing/quiet-hours" title="Quiet hours">
+Choose which priorities can text you at night.
+</Card>
+
+</Cards>

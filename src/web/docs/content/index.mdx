@@ -1,0 +1,73 @@
+Beep Me lets your AI agents send you a message by text, Telegram, email, Slack, Discord, or phone push. It is one MCP server that you deploy to your own Cloudflare account, and you control it from your phone.
+
+## What Beep Me does
+
+Claude, Claude Code, and other MCP clients connect to `https://your-beep-me.example/mcp`. Scripts, cron jobs, and CI send to `https://your-beep-me.example/v1/notify`.
+
+You connect your own bots, numbers, and keys. Beep Me sends through Telegram, Twilio SMS, Telnyx SMS, Resend, Gmail, SMTP, Slack, Discord, ntfy, Pushover, and webhooks.
+
+The priority of a message picks its route. With automatic routes, urgent and high go to a text message. Medium goes to your Telegram chat, and low goes to the topic's thread.
+
+Each agent has a highest priority, a set of channels, a text cap, and a message cap. You can mute or revoke an agent from your phone. The delivery log shows which agent sent each message, where it went, and whether it arrived.
+
+## How it works
+
+Each message goes through the same steps, from an MCP agent or from a script:
+
+```text
+Agent (Claude, Claude Code, script, CI)
+  |
+  |   POST /mcp (notify tool)   or   POST /v1/notify
+  v
+Priority cap      Lower the priority to the agent's highest priority.
+  |
+Holds             Hold the message if delivery is paused, or the agent or topic is muted.
+  |
+Collapse          Merge a repeat from the same agent inside the collapse window.
+  |
+Message cap       Hold the message if the agent went over its hourly cap.
+  |
+Rules and routes  Use the first rule that matches, or the route for the priority.
+  |               Apply quiet hours, the agent's channels, and the text cap.
+  v
+Channels          Telegram, text message, email, Slack, Discord, push, webhook
+  |
+  v
+Delivery log      Record the status, each delivery, and a note for each decision.
+```
+
+Beep Me writes every message to the delivery log, also when it holds or collapses the message. The notes on each message explain each decision in plain sentences.
+
+## Terms
+
+| Term | Meaning |
+| --- | --- |
+| Agent | An app or script that can send you messages. Each agent has its own name and limits. |
+| Channel | A place where Beep Me sends messages, for example a Telegram bot or a Twilio number. |
+| Priority | `low`, `medium`, `high`, or `urgent`. The agent picks it, and Beep Me can lower it. |
+| Topic | A short project name. Each topic gets its own thread on channels that have threads. |
+| Route | The channels for one priority. |
+| Rule | A match on priority, topic, or agent that sends a message to other channels or mutes it. |
+| Quiet hours | A time range when Beep Me skips texts and delivers without sound where the channel allows it. Messages at the break-through level (Urgent by default) still make sound. |
+
+## Get started
+
+<Cards>
+
+<Card href="/docs/quickstart" title="Quickstart">
+Deploy Beep Me and get your first message in about five minutes.
+</Card>
+
+<Card href="/docs/agents/claude-code" title="Connect agents">
+Add Beep Me to Claude Code, Claude, other MCP clients, and scripts.
+</Card>
+
+<Card href="/docs/channels" title="Channels">
+Every channel Beep Me can send to, and what each one needs.
+</Card>
+
+<Card href="/docs/routing/priorities" title="Routing">
+Priorities, routes, rules, quiet hours, and limits.
+</Card>
+
+</Cards>

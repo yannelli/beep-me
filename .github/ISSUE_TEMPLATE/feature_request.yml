@@ -1,0 +1,16 @@
+name: Feature request
+description: Suggest a channel, a routing option, or another change.
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What you want to do and what stops you today.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposal
+      description: How you want it to work. Link provider docs for a new channel.

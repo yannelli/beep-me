@@ -1,0 +1,81 @@
+The Slack channel posts Beep Me messages to one Slack channel through an incoming webhook. With automatic routes, Slack gets a priority only when no channel higher in the list can take it. For example, Slack gets Medium messages when you have no Telegram or phone push channel. See [Which messages each channel gets](/docs/channels#which-messages-each-channel-gets).
+
+## Before you start
+
+- A Slack workspace where you can install apps.
+- A Slack channel for the messages.
+
+## Set up Slack
+
+<Steps>
+
+### Create a Slack app
+
+Open [Slack apps](https://api.slack.com/apps). Select **Create New App**. Name the app, for example "Beep Me". Pick your workspace.
+
+### Turn on incoming webhooks
+
+In the app settings, select **Incoming Webhooks**. Turn on **Activate Incoming Webhooks**.
+
+### Create the webhook
+
+Select **Add New Webhook to Workspace**. Pick the Slack channel for the messages. Select **Authorize**. Copy the webhook URL. See [Slack incoming webhooks](https://docs.slack.dev/messaging/sending-messages-using-incoming-webhooks).
+
+### Add the channel in Beep Me
+
+Open [Channels](/channels). Select **Add channel**. Select **Slack**. Paste the URL in **Webhook URL**. Select **Add channel**.
+
+Beep Me does not post to Slack when you save. The first test shows if the webhook works.
+
+### Send a test
+
+Select **Test**. The message "Test from Beep Me" appears in your Slack channel.
+
+</Steps>
+
+## Fields
+
+<ChannelFields kind="slack" />
+
+The webhook URL works as a password. Anyone with the URL can post to your channel. Beep Me encrypts it.
+
+## How messages look
+
+Each message has three parts:
+
+- The title in bold, then the body and an **Open link** link when the message has a link.
+- A small line with the priority, the agent name, and the topic, for example `🟠 High · Claude Code · #api`.
+- An **Open link** button when the message has a web link.
+
+Slack allows 3,000 characters in the main part. Beep Me shortens the body to fit. Beep Me also sends a plain text version with the priority line, the title, and the body. Slack uses it in notifications.
+
+Slack has no silent mode for webhooks, so quiet hours do not change Slack messages.
+
+## Troubleshooting
+
+Beep Me shows Slack errors as `Slack <HTTP status>: <error from Slack>`.
+
+| You see | What to do |
+| --- | --- |
+| "Slack webhook URLs start with https://hooks.slack.com/." | Copy the URL from the **Incoming Webhooks** page again. |
+| `Slack 404: channel_not_found` | Slack cannot find the channel. Create a new webhook for another channel. |
+| `Slack 410: channel_is_archived` | The Slack channel is archived. Unarchive it, or create a new webhook. |
+| `Slack 403: action_prohibited` | Slack does not allow this post. Ask a workspace admin. |
+| `no_service` | The webhook is turned off or removed. Create a new webhook. |
+| `Slack 429` | Slack limits the posts to this channel. Beep Me tries one more time after a short wait. |
+
+For other problems, see [Troubleshooting](/docs/reference/troubleshooting).
+
+## Next steps
+
+<Cards>
+
+<Card href="/docs/channels/discord" title="Discord">
+Post to Discord, with a forum post for each topic.
+</Card>
+
+<Card href="/docs/routing/routes-and-rules" title="Routes and rules">
+Choose which priorities go to Slack.
+</Card>
+
+</Cards>

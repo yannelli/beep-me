@@ -1,0 +1,172 @@
+Use the REST API to send a notification from a script, a cron job, or a CI pipeline. One `POST` request sends one message through the same pipeline that MCP agents use.
+
+## Endpoint
+
+```http
+POST https://your-beep-me.example/v1/notify
+```
+
+After you create a token, the dashboard shows a curl command with this address.
+
+## Authentication
+
+Send an agent token in the `Authorization` header:
+
+```http
+Authorization: Bearer beep_...
+```
+
+Create the token on the [Agents](/agents) screen. For the steps, see [Scripts and CI](/docs/agents/scripts).
+
+- The endpoint accepts only agent tokens that start with `beep_`. OAuth access tokens from MCP clients work only on `/mcp`.
+- Beep Me checks the token in the database on every request. After you revoke the agent or rotate the token, the next request gets HTTP 401.
+- The agent's limits apply: its highest priority, its channels, its text cap, and its message cap.
+
+## Request body
+
+The endpoint accepts two body formats. Beep Me picks the format from the `Content-Type` header.
+
+### JSON
+
+Set `Content-Type: application/json` and send the fields below.
+
+```sh
+curl -X POST https://your-beep-me.example/v1/notify \
+  -H "Authorization: Bearer $BEEPME_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"message":"Nightly backup finished","priority":"low","topic":"backups"}'
+```
+
+### Plain text
+
+With any other `Content-Type`, the whole body is the message. Put the other fields in headers or in query parameters.
+
+```sh
+curl -d "Deploy finished" \
+  -H "Authorization: Bearer $BEEPME_TOKEN" \
+  -H "X-Priority: medium" \
+  -H "X-Topic: api" \
+  https://your-beep-me.example/v1/notify
+```
+
+| Header | Query parameter | Field |
+| --- | --- | --- |
+| `X-Title` | `title` | `title` |
+| `X-Priority` | `priority` | `priority` |
+| `X-Topic` | `topic` | `topic` |
+| `X-Url` | `url` | `url` |
+
+When a request has both, the header wins. Plain text has no `dedupe_key`.
+
+<Callout type="warning">
+
+`curl -d` sends `application/x-www-form-urlencoded` by default. If you send JSON without `-H "Content-Type: application/json"`, the raw JSON becomes the message text.
+
+</Callout>
+
+## Request fields
+
+Beep Me trims spaces from the start and end of each text field before it checks the limits.
+
+| Field | Type | Required | Limits | Default |
+| --- | --- | --- | --- | --- |
+| `message` | string | Yes | 1 to 4000 characters | |
+| `title` | string or null | No | Up to 200 characters | None |
+| `priority` | string | No | `low`, `medium`, `high`, or `urgent` | `medium` |
+| `topic` | string or null | No | Up to 64 characters | None |
+| `url` | string or null | No | An `http` or `https` URL, up to 2000 characters | None |
+| `dedupe_key` | string or null | No | Up to 200 characters. JSON only. | None |
+
+Beep Me lowers `priority` to the agent's highest priority. The response shows both values. See [Priorities](/docs/routing/priorities).
+
+Beep Me joins repeated spaces in `topic` and removes a leading `#`. Topics match without regard to case, so `API` and `api` are one topic. See [Topics](/docs/routing/topics).
+
+Two messages from the same agent with the same `dedupe_key` collapse into one inside the collapse window. Without a key, Beep Me compares the topic, the title, and the message.
+
+## Response
+
+Every request that passes authentication and validation returns HTTP 200 with a JSON body. Read `status` to learn what happened.
+
+```json
+{
+  "id": "msg_3fJ9kQ2xVb7LmN1p",
+  "status": "delivered",
+  "priority": "low",
+  "requested_priority": "low",
+  "topic": "backups",
+  "quiet": false,
+  "repeat_count": 1,
+  "deliveries": [
+    { "channel": "Telegram", "kind": "telegram", "target": "topic", "ok": true, "detail": null }
+  ],
+  "notes": []
+}
+```
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `id` | string | The message ID. For a `collapsed` result, the ID of the first message. |
+| `status` | string | The result. See [Status values](#status-values). |
+| `priority` | string | The priority Beep Me used. |
+| `requested_priority` | string | The priority in the request. |
+| `topic` | string or null | The topic name after Beep Me cleans it. |
+| `quiet` | boolean | `true` when quiet hours applied. |
+| `repeat_count` | number | `1` for a new message. For a `collapsed` result, the total count. |
+| `deliveries` | array | One item for each channel Beep Me tried. Empty when Beep Me held the message. |
+| `deliveries[].channel` | string | The channel name from the dashboard. |
+| `deliveries[].kind` | string | The channel type, for example `telegram` or `twilio`. |
+| `deliveries[].target` | string | `main`, or `topic` for a topic thread. |
+| `deliveries[].ok` | boolean | `true` when the provider accepted the message. |
+| `deliveries[].detail` | string or null | The provider result or error text. |
+| `notes` | string array | Plain sentences that explain each routing decision. |
+
+### Status values
+
+| Status | Meaning |
+| --- | --- |
+| `delivered` | Every channel accepted the message. |
+| `partial` | Some channels accepted the message, and some failed. |
+| `failed` | No channel accepted the message, or no channel could take it. |
+| `muted` | You muted the agent or the topic, a rule muted the message, or quiet hours held a text. A muted topic holds only low and medium messages. |
+| `throttled` | The agent went over its message cap for the hour. Beep Me held the message. |
+| `paused` | You paused all delivery. Beep Me recorded the message and sent nothing. |
+| `collapsed` | The message matched one from the same agent inside the collapse window. Beep Me added it to the first message. |
+
+Beep Me records every status in the delivery log. `muted`, `throttled`, `paused`, and `collapsed` are normal results. Do not retry them.
+
+## Errors
+
+Errors return a JSON body with an `error` field.
+
+| HTTP | Body | Cause |
+| --- | --- | --- |
+| 400 | `{"error":"Invalid notification","fields":{...}}` | A field failed validation. `fields` maps each field name to a message. |
+| 401 | `{"error":"Missing or revoked agent token. Create one in Beep Me under Agents."}` | The token is missing, is not an `beep_` token, is unknown, or belongs to a revoked agent. |
+| 401 | `{"error":"Unknown user"}` | The token's account no longer exists. |
+| 404 | `{"error":"Not found"}` | The path or method is wrong. Use `POST /v1/notify`. |
+| 500 | `{"error":"Something went wrong. Check the Worker logs."}` | An unexpected error in the Worker. |
+
+The 401 response also has the header `WWW-Authenticate: Bearer error="invalid_token"`.
+
+Some `fields` messages from Beep Me:
+
+| Field | Message |
+| --- | --- |
+| `message` | `This field is required.` |
+| `url` | `Use an http or https URL.` |
+
+Other validation messages come from the schema library. They name the limit that failed.
+
+## Next steps
+
+<Cards>
+
+<Card href="/docs/agents/scripts" title="Scripts and CI">
+Examples for curl, GitHub Actions, and cron.
+</Card>
+
+<Card href="/docs/routing/delivery-log" title="Delivery log">
+Read each message's deliveries and notes.
+</Card>
+
+</Cards>

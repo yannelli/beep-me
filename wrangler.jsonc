@@ -1,0 +1,31 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "beep-me",
+  "main": "src/worker/index.ts",
+  "compatibility_date": "2026-11-01",
+  // global_fetch_strictly_public is required for OAuth Client ID Metadata Documents.
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "assets": {
+    "not_found_handling": "single-page-application",
+    "run_worker_first": [
+      "/mcp",
+      "/mcp/*",
+      "/api/*",
+      "/v1/*",
+      "/auth/*",
+      "/authorize",
+      "/oauth/*",
+      "/.well-known/*",
+      "/hooks/*"
+    ]
+  },
+  // `npm run setup` creates the database and namespace and adds their ids here.
+  "d1_databases": [{ "binding": "DB", "database_name": "beep-me", "migrations_dir": "migrations" }],
+  "kv_namespaces": [{ "binding": "OAUTH_KV" }],
+  "triggers": { "crons": ["*/15 * * * *"] },
+  "observability": { "enabled": true },
+  "vars": {
+    // Comma-separated Google accounts that can sign in. "*" allows any account. Empty allows only the first account that signs in.
+    "ALLOWED_EMAILS": ""
+  }
+}

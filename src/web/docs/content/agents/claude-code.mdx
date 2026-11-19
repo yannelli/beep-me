@@ -1,0 +1,132 @@
+Add Beep Me to Claude Code with one command. Claude Code can then send you a message when a long task finishes, fails, or needs your decision.
+
+## Connect Claude Code
+
+<Steps>
+
+### Copy the command
+
+In Beep Me, open [Agents](/agents). Select **Connect**. On the **Claude Code** tab, copy the command. It has this form:
+
+```sh
+claude mcp add --transport http --scope user beep-me https://your-beep-me.example/mcp
+```
+
+`--scope user` adds Beep Me to Claude Code for all of your projects.
+
+### Run the command
+
+Paste the command in a terminal. Run the command.
+
+### Sign in from Claude Code
+
+Start Claude Code. Run this command:
+
+```text
+/mcp
+```
+
+Select `beep-me`. Start the sign-in. Claude Code opens Beep Me in your browser. If Beep Me asks you to sign in, select **Continue with Google**.
+
+### Approve the agent
+
+Beep Me shows the approval page. Set these fields:
+
+| Field | What to set |
+| --- | --- |
+| **Agent name** | The name that each message shows, for example `Claude Code`. |
+| **Highest priority** | The highest priority Claude Code can send. The default is **High**. |
+| **Channels it can use** | **Every channel, including ones you add later**, or **Only the channels I pick**. |
+
+If the page shows a warning about an app on your computer, make sure that you started the sign-in. Select **Allow**.
+
+</Steps>
+
+## Check that it works
+
+<Steps>
+
+### Check the server
+
+Run this command in a terminal:
+
+```sh
+claude mcp list
+```
+
+The line for `beep-me` shows its connection status.
+
+### Ask for a message
+
+In Claude Code, send this prompt:
+
+```text
+Send me a Beep Me notification that says Claude Code is connected.
+```
+
+Claude Code calls the `notify` tool.
+
+### Check Activity
+
+In Beep Me, open **Activity**. The message shows the agent name that you set on the approval page.
+
+</Steps>
+
+## Use a token for headless runs
+
+A headless run cannot open a browser to sign in. Use an agent token for it, for example on a CI runner or a remote server.
+
+<Steps>
+
+### Create a token
+
+In Beep Me, open [Agents](/agents). Select **Connect**. On the **Scripts** tab, enter a **Name**. Select **Create token**. Copy the token. Beep Me shows it only once.
+
+### Add Beep Me with the token
+
+Run this command. Replace `$BEEPME_TOKEN` with the token, or set the variable first.
+
+```sh
+claude mcp add --transport http --scope user beep-me https://your-beep-me.example/mcp \
+  --header "Authorization: Bearer $BEEPME_TOKEN"
+```
+
+</Steps>
+
+After you create a token, the dashboard also shows this command with the token in it. A token agent needs no `/mcp` sign-in.
+
+## Ask Claude Code to notify you
+
+The Beep Me server tells Claude Code when to send a message and which priority to use. You can also ask in your prompt:
+
+```text
+Run the full test suite and fix any failures. Send me a Beep Me notification when you finish or get stuck.
+```
+
+Beep Me also has the `notify-when-done` prompt. It asks the agent to send a medium message when the task finishes, and a high message if it cannot continue. See [MCP server](/docs/reference/mcp#notify-when-done).
+
+## Reconnect or remove Claude Code
+
+If calls start to fail with HTTP 401, run `/mcp` in Claude Code. Sign in again. This happens after you revoke the agent or change the deployment address.
+
+To remove the server from Claude Code, run this command:
+
+```sh
+claude mcp remove beep-me
+```
+
+To stop the agent in Beep Me, open it on the [Agents](/agents) screen. Select **Revoke access**.
+
+## Next steps
+
+<Cards>
+
+<Card href="/docs/routing/topics" title="Topics">
+Give each project its own thread.
+</Card>
+
+<Card href="/docs/agents/access" title="Agent access">
+Change Claude Code's channels and highest priority.
+</Card>
+
+</Cards>

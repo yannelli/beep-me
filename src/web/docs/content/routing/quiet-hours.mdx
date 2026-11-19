@@ -1,0 +1,90 @@
+Quiet hours keep your phone silent for part of the day. Messages below the break-through level arrive without sound, and Beep Me skips text messages. Use this page to set quiet hours and to predict what each channel does.
+
+## Settings
+
+Quiet hours are off by default. To turn them on, open [Routing](/routing). In the **Quiet hours** card, turn on **Use quiet hours**.
+
+| Setting | Default | What it does |
+| --- | --- | --- |
+| **Start** | 22:00 | The time quiet hours start. |
+| **End** | 07:00 | The time quiet hours end. A message at exactly 07:00 is not quiet. |
+| **Days** | Every day | The days that quiet hours start on. |
+| **These still make sound** | **Urgent only** | The break-through level. Select **High and urgent** to let High through too. |
+
+Select **Save quiet hours** after you change **Start**, **End**, **Days**, or **These still make sound**. The **Quiet now** badge shows on the card when the current time is inside quiet hours.
+
+When **Start** and **End** are the same time, quiet hours do not start.
+
+## Time zone
+
+Beep Me reads **Start** and **End** in your time zone. When you first sign in, Beep Me takes the time zone from your browser. To change it, open [Settings](/settings). Then select a zone under **Time zone**.
+
+## Overnight windows and days
+
+When **Start** is later than **End**, the window runs overnight. The hours after midnight belong to the day the window started.
+
+For example, set **Start** to 22:00, **End** to 07:00, and **Days** to Mon, Tue, Wed, Thu, and Fri:
+
+| Time | Quiet | Why |
+| --- | --- | --- |
+| Friday 23:00 | Yes | The window starts on Friday. |
+| Saturday 03:00 | Yes | This part belongs to the Friday window. |
+| Saturday 23:00 | No | Saturday is not selected. |
+| Monday 03:00 | No | This part belongs to the Sunday window. |
+| Monday 23:00 | Yes | The window starts on Monday. |
+
+## Break-through
+
+A message at or above the break-through level is not quiet. It goes to its route with sound, text channels included.
+
+Beep Me checks the priority after it applies the agent's highest priority. An agent with a highest priority of High cannot break through when the level is **Urgent only**. See [Priorities](/docs/routing/priorities).
+
+## What each channel does
+
+Beep Me marks each quiet message for silent delivery where the channel supports it.
+
+| Channel | During quiet hours |
+| --- | --- |
+| Twilio SMS, Telnyx SMS | Skipped |
+| Telegram | Sent with notifications turned off for the message |
+| Discord | Sent with the suppress notifications flag |
+| ntfy | Sent at ntfy priority 1 |
+| Pushover | Sent at Pushover priority -1. Low and Medium are sent at -2. |
+| Slack, Gmail, Resend, SMTP, webhook | Sent as usual. These channels have no silent option. |
+
+The table on the [channels overview](/docs/channels) shows the same silent support in its last column. Each channel page tells what the provider does with these values.
+
+## When Beep Me skips a text
+
+Beep Me removes text channels from a quiet message. When no channel is left, Beep Me uses the [fallbacks](/docs/routing/routes-and-rules#fallbacks). It tries the lower routes, then the first channel that is not a text channel.
+
+When a quiet message has no channel left that is not a text channel, Beep Me holds it. The status is **Muted**, and Beep Me does not send it later.
+
+## Routing notes
+
+The delivery log adds one of these notes to each quiet message:
+
+```text
+Quiet hours: delivered without sound.
+Quiet hours: skipped the text. Delivered without sound.
+Quiet hours: skipped the text and sent to Telegram without sound.
+Quiet hours: Beep Me held the text. No other channel can take this message, so Beep Me sent nothing.
+```
+
+When only some of the channels have a silent option, the note ends with "without sound where the channel allows it". When none of them has one, the note ends with "These channels have no silent option".
+
+A quiet message also shows a **Quiet** badge in [Activity](/). Its details show **Quiet hours: Yes**, or **Quiet hours: Held** when Beep Me held the message.
+
+## Next steps
+
+<Cards>
+
+<Card href="/docs/routing/limits" title="Limits and repeats">
+Cap text messages and pause everything.
+</Card>
+
+<Card href="/docs/routing/delivery-log" title="Delivery log">
+Read the notes for each message.
+</Card>
+
+</Cards>

@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Report a security vulnerability
+    url: https://github.com/yannelli/beep-me/security/advisories/new
+    about: Report vulnerabilities privately. Do not open a public issue.
+  - name: Read the docs
+    url: https://github.com/yannelli/beep-me/tree/main/src/web/docs/content
+    about: Setup, channels, routing, and the MCP and REST reference.

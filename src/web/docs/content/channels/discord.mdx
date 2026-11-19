@@ -1,0 +1,86 @@
+The Discord channel posts Beep Me messages to a Discord channel through a webhook. In a forum channel, Beep Me can make one post for each topic. During quiet hours, Discord delivers the message without a notification.
+
+With automatic routes, Discord gets a priority only when no channel higher in the list can take it. When **Post per topic** is on, Low messages with a topic go to the topic's post if you have no Telegram topic threads. See [Which messages each channel gets](/docs/channels#which-messages-each-channel-gets).
+
+## Before you start
+
+- A Discord server where you can manage webhooks.
+- A text channel or a forum channel for the messages.
+
+## Set up Discord
+
+<Steps>
+
+### Create a webhook
+
+In Discord, open **Server Settings**. Open **Integrations**. Select **Create Webhook**. Pick the channel for the messages. Select **Copy Webhook URL**. See [Intro to Webhooks](https://support.discord.com/hc/en-us/articles/228383668).
+
+### Add the channel in Beep Me
+
+Open [Channels](/channels). Select **Add channel**. Select **Discord**. Paste the URL in **Webhook URL**. Turn on **Post per topic** if the webhook posts to a forum channel. Select **Add channel**.
+
+Beep Me checks the webhook with Discord. It shows an error if Discord does not know the webhook.
+
+### Send a test
+
+Select **Test**. The message "Test from Beep Me" appears in your Discord channel. With **Post per topic** on, it appears in a post named "Beep Me".
+
+</Steps>
+
+## Fields
+
+<ChannelFields kind="discord" />
+
+The webhook URL works as a password. Anyone with the URL can post to your channel. Beep Me encrypts it.
+
+## How messages look
+
+Each message is an embed from a sender named "Beep Me":
+
+- The title of the embed is the message title. It links to the message link when the link is a web address.
+- The first line shows the priority and the agent name, for example `🟠 **High** · Claude Code`. The body follows.
+- The color of the embed shows the priority: red for Urgent, orange for High, blue for Medium, gray for Low.
+- The footer shows the agent name and the topic, with the time of the message.
+
+The title can have 256 characters and the body 4,096. Beep Me shortens longer text. Beep Me turns off mentions, so a message cannot ping `@everyone` or a role.
+
+During quiet hours, Beep Me sets Discord's flag that suppresses notifications. The message appears in the channel without a push or desktop notification. See [Discord messages](https://docs.discord.com/developers/resources/message).
+
+## Forum posts for each topic
+
+A Discord forum channel needs a post for each message. Turn on **Post per topic** for a forum webhook:
+
+- The first message with a new topic makes a post with the topic name. Beep Me uses up to 100 characters of the name.
+- Later messages with that topic go to the same post.
+- Messages without a topic go to one shared post named "Beep Me". The **Test** button also uses this post.
+- If you delete a post, Beep Me makes a new one for the next message.
+
+Keep **Post per topic** off for a normal text channel. Discord does not accept a post name in a text channel.
+
+## Troubleshooting
+
+Beep Me shows Discord errors as `Discord <HTTP status> <Discord code>: <message>`.
+
+| You see | What to do |
+| --- | --- |
+| "Use a Discord webhook URL." | Copy the URL again with **Copy Webhook URL**. It starts with `https://discord.com/api/webhooks/`. |
+| `Discord 401` or `Discord 404` when you save | Discord does not know this webhook. It was deleted, or the URL is incomplete. Create a new webhook. |
+| `Discord 400 220001` | The webhook posts to a forum channel. Turn on **Post per topic**. |
+| `Discord 400 220003` | The webhook posts to a text channel. Turn off **Post per topic**. |
+| `Discord 429` | Discord limits the posts from this webhook. Beep Me tries one more time after a short wait. |
+
+For other problems, see [Troubleshooting](/docs/reference/troubleshooting).
+
+## Next steps
+
+<Cards>
+
+<Card href="/docs/routing/topics" title="Topics">
+Group messages by project, with a post for each topic.
+</Card>
+
+<Card href="/docs/routing/quiet-hours" title="Quiet hours">
+Get messages without notifications at night.
+</Card>
+
+</Cards>

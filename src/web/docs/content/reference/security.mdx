@@ -1,0 +1,120 @@
+This page describes how Beep Me protects channel keys, sessions, and agent access. It also lists the checks on each incoming request and the signatures on outgoing ones.
+
+## Keys from APP_SECRET
+
+Beep Me derives a separate key for each purpose from `APP_SECRET` with HKDF (SHA-256).
+
+| Purpose | Algorithm |
+| --- | --- |
+| Channel keys and other channel settings | AES-GCM, 256-bit key, a new random IV for each write |
+| Dashboard sessions | HMAC-SHA-256 |
+| Google sign-in state | HMAC-SHA-256 |
+| Text message receipt URLs | HMAC-SHA-256 |
+
+Beep Me stores each channel's whole settings object encrypted in D1. The dashboard API does not return saved secrets. It returns only that a secret is set. For a secret longer than 8 characters, it also returns the last 4 characters.
+
+## Dashboard sessions
+
+| Property | Value |
+| --- | --- |
+| Cookie name | `__Host-beepme_session` on `https`. `beepme_session` on `http` (local development). |
+| Flags | `HttpOnly`, `SameSite=Lax`, `Path=/`. `Secure` on `https`. |
+| Lifetime | 30 days |
+| Contents | User ID, session version, expiry, and an HMAC signature |
+
+The dashboard API blocks writes from other sites. A `POST`, `PATCH`, or `DELETE` with an `Origin` header from another site gets HTTP 403 with `Cross-site request blocked.`
+
+## Google sign-in
+
+- Beep Me uses the authorization code flow with PKCE (`S256`).
+- The `state` value and the PKCE verifier are in a signed cookie that expires after 10 minutes.
+- Beep Me checks the ID token's issuer, audience, and expiry. It refuses an email address that Google has not verified.
+- `ALLOWED_EMAILS` decides which accounts can sign in. See [Configuration](/docs/reference/configuration#allowed_emails).
+- Sign-in asks only for `openid email profile`. Beep Me keeps no Google token for sign-in.
+
+## Agent tokens
+
+| Property | Value |
+| --- | --- |
+| Format | `beep_` and 40 random letters and digits |
+| Storage | SHA-256 hash only. Beep Me cannot show a token again. |
+| Shown | Once, when you create or rotate it. After that, only the last 4 characters. |
+| Rotate | **Rotate token** makes a new token. The old token stops at once. |
+| Revoke | **Revoke access** deletes the hash. The token stops at once. |
+
+## OAuth agents
+
+- Each OAuth client goes through an approval page. You set the agent's name, highest priority, and channels there.
+- The approval page shows the publisher's domain for clients that use Client ID Metadata Documents. For self-registered clients, it says Beep Me cannot confirm the name.
+- When the redirect goes to an app on your computer, the page shows a warning.
+- Beep Me binds each token to the exact MCP URL. A token from one address does not work on another.
+- Access tokens last 1 hour. Refresh tokens last 90 days.
+
+For the endpoints, see [MCP server](/docs/reference/mcp#oauth).
+
+## Revocation
+
+Beep Me reads the agent from D1 on every MCP and REST request. KV, where the OAuth tokens live, is eventually consistent, so Beep Me does not rely on it for revocation.
+
+When you revoke an agent, Beep Me:
+
+1. Marks the agent revoked in D1.
+2. Deletes its token hash.
+3. Deletes each OAuth grant for that agent.
+
+The agent's next request gets HTTP 401. To revoke an agent, open it on the [Agents](/agents) screen. Select **Revoke access**.
+
+## Incoming requests
+
+| Endpoint | Check |
+| --- | --- |
+| `/mcp` | A valid OAuth token or `beep_` token, an active agent in D1, and an allowed `Origin` header. |
+| `/v1/notify` | An `beep_` token for an active agent. |
+| `/api/*` | A signed session cookie, and the same-site check on writes. |
+| `/hooks/telegram/<channel>` | The `X-Telegram-Bot-Api-Secret-Token` header must match the channel's own secret. Beep Me compares the values in constant time. |
+| `/hooks/sms/<delivery>/<signature>` | The signature must be the HMAC of the delivery ID. |
+
+Each check that fails returns HTTP 401 or 403.
+
+The `Mute <agent name> 1h` button on a Telegram message works only in a chat that is linked to that channel.
+
+## Outgoing requests
+
+### SMTP
+
+For a server on STARTTLS, Beep Me first reads the server's `EHLO` reply. If the reply does not offer STARTTLS, Beep Me does not send the password. The send fails with this detail:
+
+```text
+smtp.example.com does not offer STARTTLS. Beep Me did not send your password. Use SSL/TLS on port 465.
+```
+
+Beep Me removes the SMTP password from any error text that it saves.
+
+### Webhooks
+
+When you set a signing secret on a webhook channel, each request has two headers:
+
+| Header | Value |
+| --- | --- |
+| `X-BeepMe-Timestamp` | Unix time in seconds |
+| `X-BeepMe-Signature` | `sha256=` and the hex HMAC-SHA-256 of `<timestamp>.<body>` |
+
+To check a request, compute the HMAC of the timestamp, a period, and the raw body. Compare it with the header. See also [Webhook](/docs/channels/webhook).
+
+### Error details
+
+Channel adapters return provider errors as plain text in the delivery log. They do not put keys or tokens in that text.
+
+## Next steps
+
+<Cards>
+
+<Card href="/docs/reference/configuration" title="Configuration">
+Set `APP_SECRET` and the other secrets.
+</Card>
+
+<Card href="/docs/agents/access" title="Agent access">
+Limit, mute, or revoke each agent.
+</Card>
+
+</Cards>

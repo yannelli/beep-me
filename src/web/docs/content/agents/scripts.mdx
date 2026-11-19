@@ -1,0 +1,159 @@
+Send messages from curl, shell scripts, cron jobs, and CI pipelines. Each script uses an agent token and one `POST` request to `/v1/notify`.
+
+## Create a token
+
+<Steps>
+
+### Open the token form
+
+In Beep Me, open [Agents](/agents). Select **Connect**. Select the **Scripts** tab.
+
+### Fill in the form
+
+| Field | What to set |
+| --- | --- |
+| **Name** | The name that each message shows, for example `GitHub Actions`. |
+| **Highest priority it can send** | Beep Me lowers higher requests to this level. The default is **High**. |
+| **Channels** | The channels this script can use. |
+
+### Copy the token
+
+Select **Create token**. Copy the token that starts with `beep_`. Beep Me shows it only once.
+
+### Store the token
+
+Keep the token in a secret store or an environment variable. The examples on this page read it from `$BEEPME_TOKEN`.
+
+```sh
+export BEEPME_TOKEN=beep_...
+```
+
+</Steps>
+
+After you create the token, the dashboard shows a curl command and a Claude Code command with the token in them.
+
+## Send a message
+
+<Tabs>
+
+<Tab label="curl (JSON)">
+
+```sh
+curl -X POST https://your-beep-me.example/v1/notify \
+  -H "Authorization: Bearer $BEEPME_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"title":"Backup finished","message":"Nightly backup finished in 4 minutes.","priority":"low","topic":"backups"}'
+```
+
+</Tab>
+
+<Tab label="curl (plain text)">
+
+The body is the message. Put the other fields in `X-` headers.
+
+```sh
+curl -d "Deploy finished" \
+  -H "Authorization: Bearer $BEEPME_TOKEN" \
+  -H "X-Title: api deployed" \
+  -H "X-Priority: medium" \
+  -H "X-Topic: api" \
+  -H "X-Url: https://example.com/deploys/42" \
+  https://your-beep-me.example/v1/notify
+```
+
+</Tab>
+
+<Tab label="GitHub Actions">
+
+Save the token as a repository secret named `BEEPME_TOKEN`. Add this step at the end of a job:
+
+```yaml title=".github/workflows/ci.yml"
+- name: Notify Beep Me
+  if: always()
+  env:
+    BEEPME_TOKEN: ${{ secrets.BEEPME_TOKEN }}
+  run: |
+    curl -fsS https://your-beep-me.example/v1/notify \
+      -H "Authorization: Bearer $BEEPME_TOKEN" \
+      -H "X-Title: CI ${{ job.status }}" \
+      -H "X-Priority: ${{ job.status == 'success' && 'medium' || 'high' }}" \
+      -H "X-Topic: ${{ github.event.repository.name }}" \
+      -H "X-Url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+      -d "${{ github.workflow }} on ${{ github.ref_name }}: ${{ job.status }}"
+```
+
+`if: always()` runs the step when the job fails. A failed job sends a high message.
+
+</Tab>
+
+<Tab label="cron">
+
+Set the token at the top of the crontab. Then add the job:
+
+```sh title="crontab -e"
+BEEPME_TOKEN=beep_...
+0 3 * * * /usr/local/bin/backup.sh && curl -fsS -d "Nightly backup finished" -H "Authorization: Bearer $BEEPME_TOKEN" -H "X-Priority: low" -H "X-Topic: backups" https://your-beep-me.example/v1/notify
+```
+
+To get a message only when the job fails, use `||` in place of `&&`, and set `X-Priority: high`.
+
+</Tab>
+
+</Tabs>
+
+## Read the response
+
+Beep Me returns HTTP 200 and JSON for each message that passes validation:
+
+```json
+{
+  "id": "msg_3fJ9kQ2xVb7LmN1p",
+  "status": "delivered",
+  "priority": "low",
+  "requested_priority": "low",
+  "topic": "backups",
+  "quiet": false,
+  "repeat_count": 1,
+  "deliveries": [
+    { "channel": "Telegram", "kind": "telegram", "target": "topic", "ok": true, "detail": null }
+  ],
+  "notes": []
+}
+```
+
+Read `status` to see what happened. `muted`, `throttled`, `paused`, and `collapsed` are normal results, so do not retry them. For each field and status, see [REST API](/docs/reference/rest-api).
+
+## Check that it works
+
+<Steps>
+
+### Run the command
+
+Run one of the examples above. The response shows `"status": "delivered"` when each channel accepted the message.
+
+### Check Activity
+
+In Beep Me, open **Activity**. The message shows the token's name. Select the message to see each delivery and the routing notes.
+
+</Steps>
+
+## Rotate or revoke a token
+
+Open the agent on the [Agents](/agents) screen.
+
+- Select **Rotate token** to get a new token. The old token stops at once. Update each script that uses it.
+- Select **Revoke access** to stop the agent. Its next request gets HTTP 401.
+
+## Next steps
+
+<Cards>
+
+<Card href="/docs/reference/rest-api" title="REST API">
+Every field, limit, status, and error code.
+</Card>
+
+<Card href="/docs/routing/limits" title="Limits and repeats">
+Message caps, text caps, and collapsed repeats.
+</Card>
+
+</Cards>

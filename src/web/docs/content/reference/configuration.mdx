@@ -1,0 +1,153 @@
+This page lists every secret, variable, and binding that Beep Me reads. It also covers custom domains, the database schema, and how long Beep Me keeps messages.
+
+## Secrets
+
+Set secrets with Wrangler. `npm run setup` sets all three for you.
+
+```sh
+npx wrangler secret put APP_SECRET
+npx wrangler secret put GOOGLE_CLIENT_ID
+npx wrangler secret put GOOGLE_CLIENT_SECRET
+```
+
+| Name | Required | Purpose |
+| --- | --- | --- |
+| `APP_SECRET` | Yes | 32 or more characters. Beep Me derives the keys that encrypt channel keys and sign sessions from it. |
+| `GOOGLE_CLIENT_ID` | Yes, for sign-in | The Google OAuth client ID. Google sign-in and the Gmail **Connect with Google** option use it. |
+| `GOOGLE_CLIENT_SECRET` | Yes, for sign-in | The Google OAuth client secret. |
+
+### APP_SECRET
+
+Make a random value with this command:
+
+```sh
+openssl rand -hex 32 | npx wrangler secret put APP_SECRET
+```
+
+If `APP_SECRET` is missing or shorter than 32 characters, every page shows **Finish setup**. The page tells you to set the secret.
+
+<Callout type="warning">
+
+Do not change `APP_SECRET` after you add channels. Beep Me cannot decrypt channel keys that it saved with the old value, and every session ends.
+
+</Callout>
+
+### Google OAuth client
+
+Until both Google secrets are set, the sign-in page shows **Set up Google sign-in** with the steps. Create a client of type **Web application**. Add this redirect URI:
+
+```text
+https://your-beep-me.example/auth/google/callback
+```
+
+The Gmail channel uses the same client. See [Gmail](/docs/channels/gmail).
+
+## Variables
+
+Set variables in `vars` in `wrangler.jsonc`. Then deploy again with `npm run deploy`.
+
+```jsonc title="wrangler.jsonc"
+"vars": {
+  "ALLOWED_EMAILS": "you@example.com",
+  "PUBLIC_URL": "https://beep-me.example.com"
+}
+```
+
+| Name | Required | Purpose |
+| --- | --- | --- |
+| `ALLOWED_EMAILS` | Yes | The Google accounts that can sign in. |
+| `PUBLIC_URL` | No | The public address of the Worker. Set it when you use a custom domain. |
+| `DEV_LOGIN` | No | `true` shows **Continue as developer** on localhost. Set it in `.dev.vars` only. |
+
+### ALLOWED_EMAILS
+
+| Value | Who can sign in |
+| --- | --- |
+| `you@example.com,partner@example.com` | Only the listed accounts. Beep Me ignores case and spaces. |
+| `*` | Any Google account. Each account gets its own channels, agents, and messages. |
+| Empty | Only the first account that signs in. After that account exists, Beep Me refuses all other accounts. |
+
+`npm run setup` asks for this value and writes it to `wrangler.jsonc`.
+
+### PUBLIC_URL
+
+Beep Me builds its links from the address of each request. When `PUBLIC_URL` is set, Beep Me uses it for every request. This value affects:
+
+- The MCP URL and the REST URL that the dashboard shows.
+- The Google redirect URI.
+- The Telegram webhook address and the text message receipt address.
+- The MCP URL that Beep Me binds each OAuth token to.
+
+Omit the trailing slash. Beep Me removes it if you add one.
+
+## Custom domain
+
+1. Add the custom domain to the Worker in Cloudflare. See [Custom Domains](https://developers.cloudflare.com/workers/configuration/routing/custom-domains/) in the Cloudflare docs.
+2. Set `PUBLIC_URL` to the new address, for example `https://beep-me.example.com`.
+3. Run `npm run deploy`.
+4. In Google Cloud, add `https://beep-me.example.com/auth/google/callback` as a redirect URI.
+5. Reconnect each OAuth agent, for example Claude and Claude Code. Beep Me bound their tokens to the old MCP URL.
+6. Open each Telegram channel. Select **Save changes**. Beep Me then sets the webhook to the new address.
+
+Agent tokens that start with `beep_` continue to work after the change.
+
+## Bindings
+
+`npm run setup` creates these resources and writes their IDs to `wrangler.jsonc`.
+
+| Binding | Type | Name | Holds |
+| --- | --- | --- | --- |
+| `DB` | D1 database | `beep-me` | Users, channels, agents, topics, messages, and deliveries. |
+| `OAUTH_KV` | KV namespace | `beep-me-oauth` | OAuth clients, grants, and tokens. |
+
+`wrangler.jsonc` also sets two compatibility flags. `nodejs_compat` is for the Node.js APIs. Client ID Metadata Documents need `global_fetch_strictly_public`.
+
+## Database schema
+
+The schema is in `migrations/0001_init.sql`. The Worker applies it on the first request after it starts, so a new deploy needs no migration step. Every statement in the file is idempotent.
+
+You can also apply the schema yourself:
+
+```sh
+npx wrangler d1 migrations apply beep-me --remote
+```
+
+## Data retention
+
+A cron trigger runs every 15 minutes:
+
+```jsonc title="wrangler.jsonc"
+"triggers": { "crons": ["*/15 * * * *"] }
+```
+
+Each run deletes messages and deliveries older than 30 days, and expired Telegram link codes. Channels, agents, topics, and settings stay until you delete them.
+
+To delete everything, open [Settings](/settings). Delete your account. Beep Me deletes your channels, agents, rules, and messages, and revokes each OAuth grant.
+
+## Defaults
+
+Each new account starts with these settings. Change them on the [Routing](/routing) screen.
+
+| Setting | Default |
+| --- | --- |
+| Text cap | 5 texts for each agent each hour |
+| Message cap | 60 messages for each agent each hour |
+| Collapse window | 10 minutes |
+| Quiet hours | Off. When on, the default is 22:00 to 07:00, and only urgent messages make sound. |
+| Routes | Automatic. Routes follow the channels you connect. |
+
+For how these settings work, see [Limits and repeats](/docs/routing/limits) and [Quiet hours](/docs/routing/quiet-hours).
+
+## Next steps
+
+<Cards>
+
+<Card href="/docs/reference/security" title="Security">
+How Beep Me uses `APP_SECRET` and checks each request.
+</Card>
+
+<Card href="/docs/local-development" title="Local development">
+Run Beep Me on your computer with `.dev.vars`.
+</Card>
+
+</Cards>

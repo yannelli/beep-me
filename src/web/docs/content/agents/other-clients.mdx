@@ -1,0 +1,99 @@
+Connect any MCP client that supports remote servers over Streamable HTTP. The client signs in with OAuth, or it sends an agent token in a header.
+
+## What the client needs
+
+| Setting | Value |
+| --- | --- |
+| URL | `https://your-beep-me.example/mcp` |
+| Transport | Streamable HTTP |
+| Sign-in | OAuth 2.1 with PKCE, or a bearer token that starts with `beep_` |
+| OAuth client identity | Client ID Metadata Document, or dynamic client registration |
+| Scope | `notify` |
+
+Beep Me serves MCP protocol version `2026-07-28`, and 2025 versions through a stateless fallback. For the full details, see [MCP server](/docs/reference/mcp).
+
+## Connect with OAuth
+
+Use OAuth when the client can open a browser.
+
+<Steps>
+
+### Copy the MCP URL
+
+In Beep Me, open [Agents](/agents). Select **Connect**. On the **Other** tab, copy the URL.
+
+### Add a remote server in the client
+
+Add the URL as a remote MCP server. Select the Streamable HTTP transport. The steps are different in each client. Use the client's own docs.
+
+### Sign in to Beep Me
+
+The first time the client connects, it opens a Beep Me sign-in page. If Beep Me asks you to sign in, select **Continue with Google**.
+
+### Approve the agent
+
+Beep Me shows the approval page. Set the **Agent name**, the **Highest priority**, and the **Channels it can use**. Select **Allow**.
+
+</Steps>
+
+The approval page shows how the client identified itself:
+
+- A client with a Client ID Metadata Document shows `Published by <domain>.`
+- A client that used dynamic client registration shows `This app registered itself, so Beep Me cannot confirm its name.`
+- A client that gets the sign-in result on your computer shows a warning. Select **Deny** if you did not start the connection from that app.
+
+## Connect with a token
+
+Use a token when the client cannot do OAuth but can send custom headers. Use it also for clients that run without a browser.
+
+<Steps>
+
+### Create a token
+
+In Beep Me, open [Agents](/agents). Select **Connect**. On the **Scripts** tab, fill in the form. Select **Create token**. Copy the token. Beep Me shows it only once.
+
+### Add the header in the client
+
+Set this header on every request to the MCP URL:
+
+```http
+Authorization: Bearer beep_...
+```
+
+</Steps>
+
+With a token, Beep Me skips the approval page. You set the agent's name, priority, and channels when you create the token.
+
+## Check that it works
+
+<Steps>
+
+### Ask the agent for a message
+
+Ask the agent to call the `notify` tool. For example:
+
+```text
+Send me a Beep Me notification that says this client is connected.
+```
+
+### Check Activity
+
+In Beep Me, open **Activity**. The message shows the agent's name. Select the message to see each delivery and the routing notes.
+
+</Steps>
+
+If the client gets HTTP 401, the token is wrong or you revoked the agent. If it gets HTTP 403, the client sent an `Origin` header that Beep Me does not accept. See [Troubleshooting](/docs/reference/troubleshooting).
+
+## Next steps
+
+<Cards>
+
+<Card href="/docs/reference/mcp" title="MCP server">
+Tools, prompt, server instructions, and OAuth endpoints.
+</Card>
+
+<Card href="/docs/agents/access" title="Agent access">
+Change an agent's channels and highest priority.
+</Card>
+
+</Cards>

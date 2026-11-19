@@ -1,0 +1,92 @@
+The delivery log is the [Activity](/) screen. It lists each message your agents send, the channels it went to, and the reason for each routing choice. Use it to find out why a message did or did not reach you.
+
+## Read the log
+
+Each row shows the agent, the time, the title or the text, and the priority. Beep Me adds badges for the topic, the status, the repeat count, and quiet hours. A **Delivered** message has no status badge.
+
+To filter the log, select a priority, **All agents**, or **Any status** above the list. Select a row to open its details:
+
+| Detail | What it shows |
+| --- | --- |
+| **Priority** | The priority Beep Me used. When Beep Me lowered it, the requested priority shows first. |
+| **Status** | The message status. |
+| **Topic** | The topic, when the message has one. |
+| **Repeats** | The repeat count and the time of the last repeat. See [Limits and repeats](/docs/routing/limits). |
+| **Quiet hours** | **Yes** when quiet hours applied, or **Held** when Beep Me held the message. |
+| **Sent with** | **MCP**, **API**, **Test**, or **Beep Me**. |
+| **Routing notes** | The reasons for each routing choice. |
+| **Deliveries** | Each channel and target, with its own status and details. |
+
+## Message status
+
+| Status | Meaning |
+| --- | --- |
+| **Delivered** | Every channel accepted the message. |
+| **Partly delivered** | Some channels accepted the message, and some failed. |
+| **Failed** | No channel accepted the message, or the message had no usable channel. |
+| **Muted** | Beep Me held the message. The cause is a muted agent, a muted topic, a rule with **Mute**, or quiet hours with only text channels. |
+| **Over limit** | The agent was over its message cap. |
+| **Paused** | Beep Me was paused. |
+
+Beep Me does not send a **Muted**, **Over limit**, or **Paused** message later. The routing notes show the cause.
+
+A repeat that Beep Me collapsed does not get its own row. Beep Me adds it to the first message. The agent gets the status `collapsed`.
+
+## Delivery status
+
+| Status | Meaning |
+| --- | --- |
+| **Queued** | Beep Me started the send and has no result yet. |
+| **Sent** | The provider accepted the message. |
+| **Delivered** | The SMS provider reported that the phone got the text. |
+| **Failed** | The send failed, or the SMS provider reported a failure. The details show the error. |
+
+## SMS receipts
+
+Twilio and Telnyx send a receipt after each text. Beep Me changes the delivery from **Sent** to **Delivered** or **Failed**. A failed receipt adds the provider error to the details.
+
+A receipt changes only the delivery status. The message status comes from the sends and stays the same.
+
+Beep Me asks for receipts only when your deployment uses an `https://` address. On `localhost`, text deliveries stay at **Sent**.
+
+## Routing notes
+
+Beep Me adds a note each time it changes a message or picks a route for a reason. The notes below use the default limits and example names.
+
+| Cause | Note |
+| --- | --- |
+| Highest priority | Beep Me lowered the priority from Urgent to High, the limit for this agent. |
+| Pause | Beep Me is paused until 9:00 PM. It sent nothing. |
+| Muted agent | CI is muted until 9:00 PM. |
+| Muted topic | The topic "deploys" is muted. High and urgent messages still go out. |
+| Message cap | Rate limit reached: 60 messages per hour for CI. Beep Me held this message. |
+| Rule picked the route | The rule "Deploys to Slack" picked the destinations. |
+| Rule with **Mute** | The rule "CI noise" muted this message. |
+| Quiet hours | Quiet hours: delivered without sound. |
+| Quiet hours, text skipped | Quiet hours: skipped the text. Delivered without sound. |
+| Quiet hours, fallback | Quiet hours: skipped the text and sent to Telegram without sound. |
+| Quiet hours, held | Quiet hours: Beep Me held the text. No other channel can take this message, so Beep Me sent nothing. |
+| Fallback | No channel for High was usable. Beep Me sent it to Telegram instead. |
+| No channel | No channel could take this message. Connect a channel or check this agent's channel access. |
+| Text cap, fallback | Text limit reached (5 per hour for this agent). Sent to Telegram instead. |
+| Text cap, no fallback | Text limit reached (5 per hour for this agent). |
+
+A Telegram delivery to a topic thread can fail and then go to the main chat. Its details then start with "Sent to the main chat. Topic failed:" and the Telegram error.
+
+## Retention
+
+Beep Me deletes messages and their deliveries 30 days after Beep Me records them. A scheduled job runs every 15 minutes. See [Configuration](/docs/reference/configuration).
+
+## Next steps
+
+<Cards>
+
+<Card href="/docs/routing/routes-and-rules" title="Routes and rules">
+Read the order of checks for each message.
+</Card>
+
+<Card href="/docs/reference/troubleshooting" title="Troubleshooting">
+Fix messages that do not arrive.
+</Card>
+
+</Cards>

@@ -1,0 +1,137 @@
+Telegram gives you a private chat with your own bot. Medium messages arrive in that chat. Low messages go to a separate thread for each topic. Each message from an agent has a button that mutes that agent for one hour.
+
+With automatic routes, Beep Me also sends High and Urgent messages to Telegram when you have no text message or phone push channel. See [Which messages each channel gets](/docs/channels#which-messages-each-channel-gets).
+
+## Before you start
+
+- A Telegram account, and the Telegram app on your phone.
+- A Beep Me deployment on an `https://` address. Beep Me uses a Telegram webhook for the **Mute** button. Telegram can call only `https://` addresses.
+
+## Set up Telegram
+
+<Steps>
+
+### Create a bot
+
+Open [@BotFather](https://t.me/BotFather) in Telegram. Send `/newbot`. Enter a name for the bot, then a username that ends in `bot`. BotFather replies with a token, such as `123456789:AAH...`. Copy the token.
+
+### Add the channel in Beep Me
+
+Open [Channels](/channels). Select **Add channel**. Select **Telegram**. Paste the token in **Bot token**. Select **Next**.
+
+Beep Me checks the token with Telegram and connects to your bot.
+
+### Link your chat
+
+Select **Open Telegram**. Telegram opens a chat with your bot. Tap **Start**.
+
+The bot replies "✅ Connected to Beep Me. Medium messages arrive here." Beep Me shows **Chat linked:** and the name of your chat. The link in **Open Telegram** stays valid for 15 minutes.
+
+### Send a test
+
+Select **Test**. The message "Test from Beep Me" arrives in your bot chat.
+
+</Steps>
+
+## Fields
+
+<ChannelFields kind="telegram" />
+
+You do not enter a chat ID. Beep Me gets it when you tap **Start**.
+
+## How messages look
+
+```text
+🟠 High · Claude Code · #api
+
+Deploy failed
+
+The migration step timed out after 10 minutes.
+
+https://example.com/run/42
+```
+
+- The first line shows the priority, the agent name, and the topic. The priority and the title are bold.
+- Below the message are two buttons: `Mute Claude Code 1h`, and **Open link** when the message has a web link.
+- Beep Me turns off link previews.
+- Telegram allows 4,096 characters. Beep Me shortens the body to fit.
+- During quiet hours, the message arrives without sound.
+- Test messages start with "🧪 Test" and have no **Mute** button.
+
+## Topic threads
+
+When an agent adds a topic, Beep Me can put the message in a thread for that topic. Beep Me offers two ways to do this. After you link your chat, Beep Me shows which way is on.
+
+### Threads in the bot chat
+
+Beep Me shows "Topic threads are on. Each topic gets its own thread in your bot chat." when your bot has topics turned on for private chats. Each topic then gets its own thread in the chat with your bot.
+
+To turn this on, open @BotFather. Open the settings for your bot. Turn on topics for private chats. Then select **Check again** in Beep Me.
+
+### Threads in a group
+
+Use a group when you do not want topics in the bot chat.
+
+1. In Telegram, make a group.
+2. Turn on **Topics** in the group settings.
+3. In Beep Me, select **Use a group instead**.
+4. Select **Select a group in Telegram**. Pick your group.
+5. Let Telegram add the bot as an admin that can manage topics.
+
+The bot replies "✅ Beep Me will create a topic here for each new subject." Beep Me then shows **Topic threads go to the group** and the group name. If you remove the bot from the group, Beep Me stops using it.
+
+### How threads work
+
+- The first message with a new topic makes a thread with the topic name. Later messages with that topic go to the same thread.
+- If you delete a thread, Beep Me makes a new one for the next message.
+- If Beep Me cannot make a thread, it sends the message to the main chat. The delivery log shows "Sent to the main chat. Topic failed:" and Telegram's error.
+- Select **Test topic thread** to send a test to a thread named "Beep Me test".
+
+When topic threads are off, Beep Me shows "Topic threads are off. Messages with a topic go to the main chat." These messages show the topic as a tag, such as `#api`.
+
+## Mute button
+
+Tap `Mute <agent name> 1h` below a message. Telegram shows, for example, "Muted Claude Code for 1 h." For one hour, Beep Me does not deliver messages from that agent. Activity still records them. See [Agent access](/docs/agents/access).
+
+The button works only in the chat or group that you linked to Beep Me.
+
+## Repeated messages
+
+An agent can send the same message again within a short time. Beep Me then does not send a second message. It edits the first Telegram message and adds a line such as "Repeated ×3" at the bottom. The time window is 10 minutes by default. See [Limits and repeats](/docs/routing/limits).
+
+## Use a different bot
+
+Paste the token of the new bot in **Bot token**. Select **Save changes**. Beep Me then unlinks your chat and your group, and forgets the topic threads. Select **Open Telegram**. Tap **Start** again.
+
+## Local development
+
+On an `http://` address, Beep Me does not set the Telegram webhook. Linking still works, because the dashboard asks Telegram for your **Start** message. The **Mute** button does not work without the webhook. See [Local development](/docs/local-development).
+
+## Troubleshooting
+
+| You see | What to do |
+| --- | --- |
+| "This does not look like a bot token from @BotFather." | Copy the full token from BotFather again. It has digits, a colon, and a long code. |
+| "Telegram 401: Unauthorized" | Telegram does not accept the token. Get a new token from @BotFather. Paste it in **Bot token**. |
+| "Open the bot in Telegram and press Start to link this chat." | Your chat is not linked yet. Select **Open Telegram**. Tap **Start**. |
+| The bot replies "This link expired." | The link is older than 15 minutes. Select **Open Telegram** in Beep Me again. |
+| The bot replies "Turn on **Topics** in the settings of this group." | Turn on **Topics** for the group. Then select **Select a group in Telegram** again. |
+| "Sent to the main chat. Topic failed: createForumTopic: ..." | Make the bot an admin of the group with the permission to manage topics. |
+| "Telegram 403: Forbidden: bot was blocked by the user" | Unblock the bot in Telegram. Then tap **Start** in the bot chat. |
+| The **Mute** button does nothing | Your deployment uses `http://`. The **Mute** button needs an `https://` address. |
+
+For other problems, see [Troubleshooting](/docs/reference/troubleshooting).
+
+## Next steps
+
+<Cards>
+
+<Card href="/docs/routing/topics" title="Topics">
+Group messages by project, with a thread for each topic.
+</Card>
+
+<Card href="/docs/routing/quiet-hours" title="Quiet hours">
+Get messages without sound at night.
+</Card>
+
+</Cards>

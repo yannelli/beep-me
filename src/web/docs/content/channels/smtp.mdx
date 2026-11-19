@@ -1,0 +1,89 @@
+The SMTP channel sends Beep Me messages as email through any mail server that accepts SMTP sign-in, such as Fastmail, iCloud Mail, or your own server. With automatic routes, email gets a priority only when no channel higher in the list can take it. See [Which messages each channel gets](/docs/channels#which-messages-each-channel-gets).
+
+## Before you start
+
+- The SMTP host name, port, and security mode of your mail provider.
+- A username and password for SMTP. Many providers give you an app password for this.
+- A **From** address that your provider lets you send from.
+
+Beep Me runs on Cloudflare Workers. Cloudflare blocks outbound port 25, so use port 465 or 587. Cloudflare also blocks connections to Cloudflare IP addresses and to private addresses. See [Cloudflare TCP sockets](https://developers.cloudflare.com/workers/runtime-apis/tcp-sockets/).
+
+## Set up SMTP
+
+<Steps>
+
+### Find your provider's SMTP settings
+
+Look up the SMTP host, port, and security mode in your provider's help pages. Create an app password if your provider offers one.
+
+### Add the channel in Beep Me
+
+Open [Channels](/channels). Select **Add channel**. Select **SMTP**. Fill in **Host**, **Security**, **Username**, **Password**, **From**, and **Send to**. Select **Add channel**.
+
+When you change **Security**, Beep Me sets **Port** to 465 or 587. Beep Me does not connect to the server when you save.
+
+### Send a test
+
+Select **Test**. When the server takes the email, Beep Me shows "Accepted by" and the host name. An email with the subject `[Test] [Medium] Test from Beep Me · Beep Me` arrives at the **Send to** address.
+
+</Steps>
+
+## Fields
+
+<ChannelFields kind="smtp" />
+
+Write **From** as `Name <address>` or as an address only, for example `Beep Me <me@example.com>`.
+
+## Port 465 or 587
+
+| Security | Port | What Beep Me does |
+| --- | --- | --- |
+| **SSL/TLS, port 465** | 465 | Opens an encrypted connection from the start. |
+| **STARTTLS, port 587** | 587 | Opens a plain connection, then asks the server to switch to encryption. |
+
+### STARTTLS check
+
+Before Beep Me sends your password with STARTTLS, it checks that the server offers STARTTLS. If the server does not offer it, Beep Me stops and sends nothing. It shows "`<host>` does not offer STARTTLS. Beep Me did not send your password. Use SSL/TLS on port 465."
+
+Beep Me signs in with PLAIN, LOGIN, or CRAM-MD5. It waits up to 10 seconds for the connection and for each server reply.
+
+## How messages look
+
+The subject has the priority, the title, and the agent name:
+
+```text
+[High] Deploy failed · Claude Code
+```
+
+The email has an HTML part and a plain text part. The HTML part has a colored bar for the priority, a line with the priority, agent, and topic, then the title, body, and link. On an `https://` deployment, it ends with a **View in Beep Me** link. Email has no silent mode, so quiet hours do not change it.
+
+## Troubleshooting
+
+Beep Me shows the error text from the mail server. It replaces your password with `***` if the text has it.
+
+| You see | What to do |
+| --- | --- |
+| "Cloudflare blocks port 25. Use 465 or 587." | Change **Security** and **Port** to 465 or 587. |
+| `<host> does not offer STARTTLS. Beep Me did not send your password.` | Select **SSL/TLS, port 465**. |
+| `Failed to connect to SMTP server` | Check **Host** and **Port**. The host must be on the public internet. |
+| `Failed to plain authentication` or `Failed to login authentication` | The server does not accept **Username** and **Password**. Check them, or create a new app password. |
+| `No supported auth method found.` | The server does not offer PLAIN, LOGIN, or CRAM-MD5. Use another provider. |
+| `Invalid MAIL FROM: ...` | The server does not let you send from **From**. Use an address that your account owns. |
+| "SMTP server did not answer" | The server did not reply within 10 seconds in STARTTLS mode. Check **Host** and **Port**. |
+| "Enter a valid email address." | Enter a full address in **Send to**. |
+
+For other problems, see [Troubleshooting](/docs/reference/troubleshooting).
+
+## Next steps
+
+<Cards>
+
+<Card href="/docs/channels/gmail" title="Gmail">
+Send from Gmail with Google sign-in and no password.
+</Card>
+
+<Card href="/docs/routing/routes-and-rules" title="Routes and rules">
+Send some priorities to email and others to your phone.
+</Card>
+
+</Cards>

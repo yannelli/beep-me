@@ -1,0 +1,158 @@
+Routes send each priority to one or more channels. Rules run before routes. A rule sends the messages it matches to other destinations, or mutes them. Use this page to predict where any message goes.
+
+## Automatic routes
+
+A new account uses automatic routes. Beep Me builds them from the channels that are on and ready. When you add, fix, or remove a channel, the automatic routes change with it.
+
+For each slot, Beep Me uses the first item in the list that you have. When two channels fit one item, Beep Me uses the one you added first.
+
+| Priority | Sends to |
+| --- | --- |
+| Urgent | Your text channel and your push channel. With neither: Telegram main chat, then Slack or Discord, then email, then webhook. |
+| High | The first of: text channel, push channel, Telegram main chat, Slack or Discord, email, webhook. |
+| Medium | The first of: Telegram main chat, push channel, Slack or Discord, email, webhook. |
+| Low | The first of: Telegram topic threads, Discord forum posts, Telegram main chat, Slack or Discord, push channel, email, webhook. |
+
+Text channels are Twilio SMS and Telnyx SMS. Push channels are Pushover and ntfy. Email channels are Gmail, Resend, and SMTP. Telegram topic threads need topics turned on. Discord forum posts need a forum channel.
+
+## Fallbacks
+
+A route can have no usable channel. A channel is not usable when it is off, is not ready, or is outside the agent's channels. During quiet hours, text channels are not usable below the break-through level.
+
+When the route has no usable channel, Beep Me tries these in order:
+
+1. The route for the next lower priority, down to Low. Beep Me uses only the channels that are not text channels.
+2. The first channel you added that is not a text channel and that the agent can use.
+
+The delivery log shows a note such as this one:
+
+```text
+No channel for High was usable. Beep Me sent it to Telegram instead.
+```
+
+When no channel can take the message, its status is **Failed**. An empty route also uses these fallbacks.
+
+## Edit routes
+
+Open [Routing](/routing). The **Priority routes** card shows the **Automatic** badge while Beep Me sets the routes.
+
+<Steps>
+
+### Open the route
+
+Select **Edit** next to a priority.
+
+### Select destinations
+
+Select each channel that gets messages at this priority.
+
+### Save
+
+Select **Save route**.
+
+</Steps>
+
+When you save one route, Beep Me saves all four routes as they show on the card. The **Automatic** badge then changes to the **Use automatic** button. Your routes stay the same when you add channels.
+
+To go back to automatic routes, select **Use automatic**.
+
+## Destinations and targets
+
+A destination is a channel plus a target. Most channels have one target. Two channels have two:
+
+| Channel | Main target | Topic target |
+| --- | --- | --- |
+| Telegram | **Main chat** | **Topic threads**, one thread for each topic |
+| Discord with a forum channel | One shared post named "Beep Me" | **Forum posts**, one post for each topic |
+
+When a message has no topic, a topic target sends it to the main target. When a destination lists the same channel and target twice, Beep Me sends once. See [Topics](/docs/routing/topics).
+
+## Rules
+
+Rules run before priority routes. Beep Me checks the rules from top to bottom, and the first rule that matches wins. Beep Me skips rules that are off. You can add up to 50 rules.
+
+To add a rule, open [Routing](/routing). Then select **Add rule**. Each rule has these fields:
+
+| Field | What it matches or does |
+| --- | --- |
+| **Priority** | One or more priorities. Select none to match every priority. |
+| **Topics** | Topic patterns, separated by commas. `*` matches any text and `?` matches one character. Case does not matter. |
+| **Agents** | One or more agents. Select none to match every agent. |
+| **Action** | **Send to** replaces the priority route with the destinations you select. **Mute** records the message and does not deliver it. |
+| **Rule is on** | Turns the rule on or off. |
+
+A message must match every field that you fill in. Inside one field, one match is enough.
+
+A rule with **Topics** does not match a message that has no topic. A rule with **Agents** does not match test messages or alerts from Beep Me, because they have no agent.
+
+Patterns match the full topic. `deploy` matches the topic `deploy` and does not match `deploy-prod`. Use `deploy*` to match both. Do not start a pattern with `#`.
+
+Beep Me uses the priority after it applies the agent's highest priority. A rule for Urgent does not match an agent whose highest priority is High.
+
+**Send to** destinations follow the same checks as routes: agent channels, quiet hours, fallbacks, and the text cap. The log adds one of these notes:
+
+```text
+The rule "Deploys to Slack" picked the destinations.
+The rule "CI noise" muted this message.
+```
+
+To change the order, use the up and down arrows next to each rule.
+
+## Worked example
+
+This setup has three channels: Twilio SMS, Telegram with topic threads, and Slack. The routes are automatic, so Urgent and High go to Twilio SMS. Medium goes to the Telegram main chat. Low goes to Telegram topic threads.
+
+There are two agents. **Claude Code** has a highest priority of High. **CI** has a highest priority of Urgent. There are three rules:
+
+1. **CI noise**: priority Low, agent CI. Action **Mute**.
+2. **Deploys to Slack**: topic `deploy*`. Action **Send to** Slack.
+3. **Billing alerts**: priority Urgent, topic `billing`. Action **Send to** Twilio SMS and Telegram **Main chat**.
+
+Outside quiet hours and under the limits, messages go here:
+
+| Message | Result |
+| --- | --- |
+| CI, Low, topic `nightly` | Rule 1 matches. Status **Muted**. |
+| CI, Low, topic `deploy-prod` | Rule 1 matches first. Status **Muted**. |
+| CI, Medium, topic `deploy-prod` | Rule 2 matches. Slack. |
+| CI, Urgent, topic `Billing` | Rule 3 matches, because case does not matter. Twilio SMS and the Telegram main chat. |
+| Claude Code, Urgent, topic `billing` | Lowered to High, so rule 3 does not match. The High route sends to Twilio SMS. |
+| Claude Code, Low, topic `api` | No rule matches. The `api` thread in Telegram. |
+| Claude Code, Medium, no topic | No rule matches. The Telegram main chat. |
+
+## Order of checks
+
+Beep Me handles every message in this order. A step that ends the message stops the list.
+
+1. Check the input. A message is required. An input that is not valid gets an error, and Beep Me records nothing.
+2. Lower the priority to the agent's highest priority.
+3. Clean the topic name and add it to the topic list.
+4. If Beep Me is paused, record the message as **Paused** and stop.
+5. If the agent is muted, record the message as **Muted** and stop.
+6. If the topic is muted and the priority is below High, record the message as **Muted** and stop.
+7. If the message repeats a recent delivered message, add it to that message and stop. Test messages skip this step.
+8. If the agent is over its message cap, record the message as **Over limit** and stop.
+9. Find the first rule that matches. If its action is **Mute**, record the message as **Muted** and stop.
+10. Check quiet hours. The message is quiet when quiet hours are on now and the priority is below the break-through level.
+11. Take the destinations from the rule. With no rule, take them from the priority route.
+12. Remove each channel that is off, not ready, or outside the agent's channels. When the message is quiet, remove text channels too.
+13. If nothing is left, use the fallbacks. If the message is quiet, Beep Me removed a text channel, and no fallback exists, record it as **Muted** and stop.
+14. Check the text cap for each text channel. When the agent is over the cap, Beep Me sends to the fallbacks once.
+15. Send to every destination at the same time.
+16. Set the status: **Delivered** when every send worked, **Partly delivered** when some worked, and **Failed** when none worked.
+
+Steps 7 and 8 come from [Limits and repeats](/docs/routing/limits). Steps 10 to 13 come from [Quiet hours](/docs/routing/quiet-hours).
+
+## Next steps
+
+<Cards>
+
+<Card href="/docs/routing/quiet-hours" title="Quiet hours">
+Keep your phone silent at night.
+</Card>
+
+<Card href="/docs/routing/delivery-log" title="Delivery log">
+Check where a message went and why.
+</Card>
+
+</Cards>

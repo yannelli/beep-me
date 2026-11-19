@@ -1,0 +1,172 @@
+Run Beep Me on your computer to change the Worker, the dashboard, or these docs. The dev server reloads when you save a file. You can sign in without Google.
+
+## Start the dev server
+
+<Steps>
+
+### Install the packages
+
+You need Node.js 22 or later.
+
+```sh
+npm install
+```
+
+### Create the local secrets file
+
+```sh
+cp .dev.vars.example .dev.vars
+```
+
+`.dev.vars` is in `.gitignore`, so Git does not track it.
+
+### Set APP_SECRET
+
+Make a random value:
+
+```sh
+openssl rand -hex 32
+```
+
+Paste the value after `APP_SECRET=` in `.dev.vars`. It must have 32 or more characters.
+
+```sh title=".dev.vars"
+APP_SECRET=paste-the-random-value-here
+DEV_LOGIN=true
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
+```
+
+### Start the server
+
+```sh
+npm run dev
+```
+
+Vite runs the dashboard. The Cloudflare Vite plugin runs the Worker in workerd, the Workers runtime, on the same address.
+
+### Sign in
+
+Open `http://localhost:5173`. Select **Continue as developer**.
+
+</Steps>
+
+## What runs locally
+
+| Part | Local behavior |
+| --- | --- |
+| Worker | Runs in workerd with the bindings from `wrangler.jsonc`. |
+| D1 and KV | Local copies. Wrangler keeps the data in `.wrangler/state`. |
+| Database schema | The Worker applies `migrations/0001_init.sql` on the first request. |
+| Secrets | Read from `.dev.vars`. |
+
+To start with an empty database, stop the server and delete `.wrangler/state`.
+
+## Developer sign-in
+
+**Continue as developer** signs you in as `dev@localhost` with the name Developer. It needs both of these conditions:
+
+- `.dev.vars` has `DEV_LOGIN=true`.
+- The address is `localhost`, `127.0.0.1`, or `[::1]`.
+
+On any other address, the button does not show, and `/auth/dev` returns 404.
+
+## Google sign-in on localhost
+
+Developer sign-in is enough for most work. To test Google sign-in or the Gmail channel, do these steps:
+
+1. In your Google OAuth client, add `http://localhost:5173/auth/google/callback` as a redirect URI.
+2. Put the client ID and secret in `.dev.vars`.
+3. Restart `npm run dev`.
+
+When both Google values are set, the sign-in page shows **Continue with Google** and **Continue as developer**.
+
+## Differences on http
+
+Beep Me checks whether its address starts with `https://`. On `http://localhost`, these parts work in a different way:
+
+| Part | On http |
+| --- | --- |
+| Session cookie | Named `beepme_session`, without the `Secure` flag. |
+| Telegram | Beep Me does not set a webhook. The channel test says `Webhook not set because http://localhost:5173 is not https.` |
+| Telegram chat link | While a link waits, the dashboard reloads the channel every 2 seconds. Beep Me then calls `getUpdates` to find your **Start** message. |
+| Text message receipts | Beep Me does not ask the provider for receipts. Deliveries stay at `sent`. |
+| Message cap alert | The alert has no link to the agent. |
+
+If the same Telegram bot runs on a deployed Beep Me, it has a webhook, and `getUpdates` does not work. Use a separate bot for local development.
+
+## Connect Claude Code to the local server
+
+Claude on the web, desktop, and mobile cannot reach `localhost`. Use Claude Code with an agent token.
+
+<Steps>
+
+### Create a token
+
+In the local dashboard, open [Agents](/agents). Select **Connect**. On the **Scripts** tab, create a token. Copy the token.
+
+### Add the local server
+
+```sh
+claude mcp add --transport http --scope local beep-me-local http://localhost:5173/mcp \
+  --header "Authorization: Bearer $BEEPME_TOKEN"
+```
+
+`--scope local` adds the server for the current project only.
+
+### Check the connection
+
+```sh
+claude mcp list
+```
+
+The line for `beep-me-local` shows its connection status. On November 18, 2026, this setup showed `Connected` against the local dev server.
+
+</Steps>
+
+You can also send a test with curl:
+
+```sh
+curl -d "Hello from localhost" -H "Authorization: Bearer $BEEPME_TOKEN" http://localhost:5173/v1/notify
+```
+
+## Commands
+
+| Command | What it does |
+| --- | --- |
+| `npm run dev` | Runs the Worker and the dashboard on `http://localhost:5173`, with reload on save. |
+| `npm run typecheck` | Type-checks the Worker, the dashboard, and the Vite config. |
+| `npm run types` | Generates `worker-configuration.d.ts`. Run it after you change `wrangler.jsonc`. |
+| `npm run build` | Builds the Worker and the dashboard into `dist/`. |
+| `npm run preview` | Builds, then serves the build on your computer. |
+| `npm run check:docs` | Checks the docs pages for missing files, unknown components, dashes, and broken links. |
+| `npm run deploy` | Builds and deploys with Wrangler. |
+| `npm run setup` | Runs the guided first deploy. |
+
+## Project layout
+
+| Path | What it holds |
+| --- | --- |
+| `src/shared/` | Types and schemas that the Worker and the dashboard share. |
+| `src/worker/` | The Worker: MCP server, OAuth, routing, channels, and the JSON API. |
+| `src/worker/channels/` | One adapter for each provider. |
+| `src/worker/core/` | The notify pipeline, routing, quiet hours, and delivery. |
+| `src/web/` | The dashboard, in React 19 and Tailwind CSS 4. |
+| `src/web/docs/` | These docs. One MDX file for each page. |
+| `migrations/` | The D1 schema. |
+
+`AGENTS.md` has the rules for code changes, and `docs/docs-site.md` has the rules for docs pages.
+
+## Next steps
+
+<Cards>
+
+<Card href="/docs/reference/configuration" title="Configuration">
+Every secret and variable.
+</Card>
+
+<Card href="/docs/reference/troubleshooting" title="Troubleshooting">
+Fixes for local Telegram links and sign-in.
+</Card>
+
+</Cards>

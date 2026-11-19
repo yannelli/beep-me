@@ -1,0 +1,83 @@
+Resend sends Beep Me messages as email through the Resend API. With automatic routes, email gets a priority only when no channel higher in the list can take it. See [Which messages each channel gets](/docs/channels#which-messages-each-channel-gets). Email has no silent mode, so quiet hours do not change it.
+
+## Before you start
+
+- A Resend account. Sign up at [resend.com](https://resend.com/).
+- A domain that you can add DNS records to, for the **From** address.
+
+Resend's test address `onboarding@resend.dev` sends only to the email address of your Resend account. To send to any other address, verify a domain. See [Resend's guide to this error](https://resend.com/docs/knowledge-base/403-error-resend-dev-domain).
+
+## Set up Resend
+
+<Steps>
+
+### Verify your domain
+
+Open [Domains](https://resend.com/domains) in Resend. Add your domain. At your DNS provider, add the DNS records that Resend shows. Wait until Resend shows the domain as verified.
+
+### Create an API key
+
+Open [API keys](https://resend.com/api-keys) in Resend. Create a key. Copy the key. A key with sending access is enough.
+
+### Add the channel in Beep Me
+
+Open [Channels](/channels). Select **Add channel**. Select **Resend**. Fill in **API key**, **From**, and **Send to**. Select **Add channel**.
+
+Beep Me does not check the key when you save. The first test shows if Resend accepts it.
+
+### Send a test
+
+Select **Test**. An email with the subject `[Test] [Medium] Test from Beep Me · Beep Me` arrives at the **Send to** address.
+
+</Steps>
+
+## Fields
+
+<ChannelFields kind="resend" />
+
+Write **From** as `Name <address>` or as an address only, for example `Beep Me <alerts@example.com>`.
+
+## How messages look
+
+The subject has the priority, the title, and the agent name:
+
+```text
+[High] Deploy failed · Claude Code
+```
+
+The email has an HTML part and a plain text part. The HTML part has:
+
+- A colored bar at the top. The color shows the priority: red for Urgent, orange for High, blue for Medium, gray for Low.
+- A line with the priority, the agent name, and the topic.
+- The title as a heading, then the body and the link.
+- A **View in Beep Me** link to the message, when your deployment uses `https://`.
+
+Beep Me sends each message with an idempotency key. If Beep Me sends the same request again after an error, Resend does not send a second email.
+
+## Troubleshooting
+
+Beep Me shows Resend errors as `Resend <HTTP status>: <message from Resend>`. See [Resend errors](https://resend.com/docs/api-reference/errors).
+
+| You see | What to do |
+| --- | --- |
+| "Resend API keys start with re_." | Copy the full key from the API keys page. |
+| `Resend 401` and "API key is invalid" | The key was deleted or is not active. Create a new key. Paste it in **API key**. |
+| `Resend 403` and "You can only send testing emails to your own email address" | You send from `onboarding@resend.dev`. Verify a domain. Use an address on that domain in **From**. |
+| `Resend 403` and "The ... domain is not verified" | The domain in **From** is not verified. Verify it in Resend, or change **From**. |
+| `Resend 429` | You reached the Resend rate limit or your daily quota. Wait, or upgrade your Resend plan. |
+
+For other problems, see [Troubleshooting](/docs/reference/troubleshooting).
+
+## Next steps
+
+<Cards>
+
+<Card href="/docs/routing/routes-and-rules" title="Routes and rules">
+Send some priorities to email and others to your phone.
+</Card>
+
+<Card href="/docs/routing/delivery-log" title="Delivery log">
+See what Resend returned for each message.
+</Card>
+
+</Cards>

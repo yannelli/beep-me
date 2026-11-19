@@ -1,0 +1,143 @@
+Each agent has its own settings and its own access to Beep Me. Use this page to limit an agent, to mute it for a while, or to end its access.
+
+## What an agent is
+
+An agent is one connection to Beep Me. There are two kinds:
+
+| Kind | How you add it |
+| --- | --- |
+| OAuth | An MCP client, such as Claude, connects and you select **Allow** on the approval page. |
+| Token | You create a token on the **Scripts** tab. Scripts send the token with each request. |
+
+Each agent has a name, a highest priority, a set of channels, limits, and a mute. Every message shows the agent's name.
+
+[Agents](/agents) lists your agents. Each row shows the client name or "Token", the last time the agent connected, and its messages in the last 24 hours. Each row also shows the highest priority and the channels.
+
+## Approval page
+
+When an MCP client connects, Beep Me opens an approval page. It has these fields:
+
+| Field | Default |
+| --- | --- |
+| **Agent name** | The name the client gives |
+| **Highest priority** | High |
+| **Channels it can use** | **Every channel, including ones you add later** |
+
+Select **Allow** to create the agent. Select **Deny** to stop the connection.
+
+To create a token agent:
+
+<Steps>
+
+### Open the form
+
+Open [Agents](/agents). Select **Connect**. Then open the **Scripts** tab.
+
+### Fill in the form
+
+Enter a **Name**. Select a highest priority and the channels. The defaults are High and **All channels**.
+
+### Create the token
+
+Select **Create token**. Copy the token, because Beep Me shows it one time only.
+
+</Steps>
+
+See [Scripts and CI](/docs/agents/scripts).
+
+## Highest priority
+
+Beep Me lowers each message above the agent's highest priority to that level. The log shows a note for each lowered message. See [Priorities](/docs/routing/priorities).
+
+To change it, open the agent. Then select a level in the **Highest priority** card. The change applies to the next message.
+
+## Channels
+
+The **Channels** card sets which channels the agent can use.
+
+- **All channels** includes each channel you add later.
+- **Select channels** uses a fixed list. Channels you add later are not in the list.
+
+Beep Me applies the list to routes, rules, and fallbacks. When none of the agent's channels can take a message, its status is **Failed**. The log adds this note:
+
+```text
+No channel could take this message. Connect a channel or check this agent's channel access.
+```
+
+With **Select channels** and no channel selected, every message from the agent fails.
+
+## Limits for one agent
+
+The **Details** card has **Texts per hour** and **Messages per hour**. Leave a field empty to use the default from [Routing](/routing). Select **Save changes**. See [Limits and repeats](/docs/routing/limits).
+
+## Mute an agent
+
+A mute holds every message from the agent, Urgent included. Beep Me records each message as **Muted** and does not send it later. The agent gets the status `muted`.
+
+To mute an agent, open it. In the **Mute** card, select **1 hour**, **8 hours**, or **24 hours**. To end the mute early, select **Unmute**.
+
+In Telegram, each message from an agent has a mute button with the agent's name, such as "Mute CI 1h". Tap it to mute the agent for one hour. Test messages do not have this button.
+
+While the agent is muted, the log adds a note such as this one:
+
+```text
+CI is muted until 9:00 PM.
+```
+
+## Revoke access
+
+Revoke ends an agent's access at once. Beep Me checks the agent in the database on every MCP and REST request, so the next request fails.
+
+<Steps>
+
+### Open the agent
+
+Open [Agents](/agents). Then select the agent.
+
+### Revoke
+
+Select **Revoke access**. Then select **Revoke access** again to confirm.
+
+</Steps>
+
+For an OAuth agent, Beep Me also deletes the client's sign-in grants. For a token agent, the token is not valid after the revoke. The agent's messages stay in [Activity](/).
+
+You cannot undo a revoke. To connect the client again, approve it as a new agent.
+
+## Rotate a token
+
+Rotate gives a token agent a new token. The old token is not valid after this.
+
+Open the agent. Select **Rotate token**. Then select **Rotate token** again to confirm. Copy the new token, because Beep Me shows it one time only. Then update each script that uses the old token.
+
+**Rotate token** shows for active token agents.
+
+## Delete an agent
+
+Revoke an agent before you delete it. Open the revoked agent. Select **Delete agent**. Then select **Delete agent** again to confirm.
+
+Beep Me removes the agent from the list. Its messages stay in [Activity](/).
+
+## Reconnect a client
+
+An MCP client can connect again while its agent is active. For example, you sign in to Beep Me again from the same client. The approval page then shows **Connect as**, with **Reconnect** and the agent's name selected.
+
+When you reconnect, Beep Me keeps the same agent. The messages, the limits, and the mute stay the same.
+
+Beep Me sets the name, highest priority, and channels from the approval page. The page selects High and **Every channel, including ones you add later**. Change these fields before you select **Allow** to keep other values.
+
+Select **A new agent** to create a second agent instead. A revoked agent does not show under **Connect as**.
+
+## Next steps
+
+<Cards>
+
+<Card href="/docs/routing/limits" title="Limits and repeats">
+Set text caps and message caps.
+</Card>
+
+<Card href="/docs/reference/security" title="Security">
+Read how Beep Me stops revoked agents.
+</Card>
+
+</Cards>
