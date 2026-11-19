@@ -45,6 +45,18 @@ export const COMMANDS: Record<string, CommandHelp> = {
     summary: "Move Beep Me to a hostname in your Cloudflare zones, add aliases, or go back to workers.dev. Then deploy.",
     examples: ["bun run cli domain", "bun run cli domain --yes --domain beep.example.com --alias notify.example.com"],
   },
+  upgrade: {
+    usage: "upgrade [flags]",
+    summary: "Update this checkout to the newest release, then build and deploy it. It shows the release notes and asks first.",
+    flags: [
+      "--check                      Only compare the installed version with the newest release. Add --json for JSON.",
+      "--to <vX.Y.Z>                Update to this release. Older releases are refused.",
+      "--remote <name>              Read releases from this git remote. Default: upstream, else origin.",
+      "--no-deploy                  Update the code and packages, and skip the deploy.",
+      "--continue                   Run the deploy part only, after scripts/upgrade.sh or a manual git update.",
+    ],
+    examples: ["bun run upgrade", "bun run upgrade --check --json", "bun run upgrade --dry-run", "bun run upgrade --yes --to v0.6.0"],
+  },
   deploy: { usage: "deploy", summary: "Build with your deployment values and deploy.", examples: ["bun run cli deploy --yes"] },
   logs: { usage: "logs", summary: "Stream live logs from the Worker.", examples: ["bun run cli logs"] },
   open: { usage: "open", summary: "Open the dashboard in your browser, or print its address.", examples: ["bun run cli open"] },

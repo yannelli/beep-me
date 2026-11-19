@@ -7,6 +7,8 @@ import { commandHelp, COMMANDS, mainHelp } from "./help.ts";
 import { agentsList, agentsMute, agentsRevoke, channelsList, messagesList, pause, resume, status } from "./manage.ts";
 import { emailsCommand, setup } from "./setup.ts";
 import { dim, prompt, say, type Choice } from "./ui.ts";
+import { upgradeCommand } from "./upgrade.ts";
+import { updateAvailable } from "./versions.ts";
 import { query } from "./wrangler.ts";
 
 const LOCAL_COMMANDS = new Set(["agents", "channels", "messages", "pause", "resume"]);
@@ -86,9 +88,13 @@ async function menu(ctx: Ctx): Promise<void> {
   say.intro("Beep Me");
   const account = await signIn(ctx);
   say.info(`Account: ${account.name} ${dim(account.id)}`);
+  const latest = updateAvailable(ctx);
+  const update: Choice<string> = { value: "upgrade", label: latest ? `Update available: ${latest}` : "Update Beep Me" };
+  const options = MENU.flatMap((item) => (item.value === "deploy" ? [update, item] : [item]));
   for (;;) {
-    const choice = await prompt.select("What do you want to do?", MENU);
+    const choice = await prompt.select("What do you want to do?", options);
     if (choice === "quit") return say.outro("Bye.");
+    if (choice === "upgrade") return upgradeCommand(ctx);
     try {
       if (choice === "setup") await setup(ctx);
       else if (choice === "agents mute" || choice === "agents revoke") {
@@ -119,6 +125,7 @@ async function main(): Promise<void> {
     return menu(ctx);
   }
   if (command === "setup") return setup(ctx);
+  if (command === "upgrade") return upgradeCommand(ctx);
   if (!COMMANDS[command]) throw new UsageError(`Unknown command "${command}".`);
   const account = ctx.flags.local && LOCAL_COMMANDS.has(command) ? null : await signIn(ctx);
   await run(ctx, account, positionals);

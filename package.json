@@ -45,6 +45,7 @@
     "check:docs": "node scripts/check-docs.mjs",
     "setup": "node scripts/cli/main.ts setup",
     "cli": "node scripts/cli/main.ts",
+    "upgrade": "node scripts/cli/main.ts upgrade",
     "release": "node scripts/release.mjs"
   },
   "engines": {

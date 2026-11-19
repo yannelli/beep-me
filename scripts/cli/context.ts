@@ -20,6 +20,12 @@ export const FLAGS = {
   "non-interactive": { type: "boolean" },
   "dry-run": { type: "boolean" },
   json: { type: "boolean" },
+  to: { type: "string" },
+  remote: { type: "string" },
+  check: { type: "boolean" },
+  continue: { type: "boolean" },
+  from: { type: "string" },
+  "no-deploy": { type: "boolean" },
   help: { type: "boolean", short: "h" },
 } as const;
 
