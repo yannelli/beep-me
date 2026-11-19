@@ -6,6 +6,7 @@ import type { Agent } from "../db/agents";
 import { getMessage } from "../db/messages";
 import type { User } from "../db/users";
 import { notify, notifyInputShape, type RunContext } from "../core/notify";
+import { registerReplyTools } from "./replies";
 
 export interface McpSession extends RunContext {
   user: User;
@@ -18,7 +19,9 @@ Skip routine progress steps. Send one message per event.
 Priorities: urgent needs action now and can break through quiet hours. high is important and time sensitive and usually arrives as a text message. medium is worth seeing today and is the default. low is background information and goes to the topic's thread.
 Set topic to a short project or subject name, such as the repository name. Each topic gets its own thread.
 Lead the title with the outcome. Keep message to a few sentences. Add url when there is a page to open.
-Beep Me applies the user's routing, quiet hours, and limits. The statuses collapsed, muted, paused, and throttled are normal results. Do not retry them.`;
+Beep Me applies the user's routing, quiet hours, and limits. The statuses collapsed, muted, paused, and throttled are normal results. Do not retry them.
+To ask the user something, send notify with options (2 to 10 short choices) or expect_reply true, then call get_replies with the returned id. Pass wait_seconds (up to 50) to wait for the answer, and call again if nothing arrived yet. Replies can include text, a chosen option, a reaction, or files.
+Attach screenshots, logs, or reports with attachments (a public url, or base64 data up to 20 MB). Set sender_name to show a project name next to your agent name.`;
 
 const deliverySchema = z.object({
   channel: z.string(),
@@ -50,13 +53,14 @@ const statusOutput = z.object({
   notes: z.array(z.string()),
 });
 
-function summary(result: z.infer<typeof notifyOutput>): string {
+function summary(result: z.infer<typeof notifyOutput>, awaitsReply: boolean): string {
   const sent = result.deliveries.filter((d) => d.ok).map((d) => `${d.channel}${d.target === "topic" ? " (topic thread)" : ""}`);
   const failed = result.deliveries.filter((d) => !d.ok).map((d) => `${d.channel}: ${d.detail ?? "failed"}`);
   const lines = [`Status: ${result.status}. Priority: ${result.priority}.`];
   if (sent.length) lines.push(`Delivered to ${sent.join(", ")}.`);
   if (failed.length) lines.push(`Failed: ${failed.join("; ")}.`);
   lines.push(...result.notes);
+  if (awaitsReply) lines.push(`Call get_replies with message_id "${result.id}" to read the answer.`);
   return lines.join("\n");
 }
 
@@ -80,6 +84,10 @@ export function buildServer(session: McpSession | undefined): McpServer {
         topic: notifyInputShape.topic.describe("Project or subject name, for example the repo name. Each topic gets its own thread."),
         url: notifyInputShape.url.describe("Optional link to open, for example a pull request or dashboard."),
         dedupe_key: notifyInputShape.dedupe_key.describe("Optional. Messages with the same key inside the collapse window are merged."),
+        attachments: notifyInputShape.attachments.describe("Optional files: screenshots, logs, reports. Up to 10."),
+        options: notifyInputShape.options.describe("Optional choices for a question, 2 to 10, each up to 64 characters. Read the answer with get_replies."),
+        expect_reply: notifyInputShape.expect_reply.describe("Set true when you want a written answer. Read it with get_replies."),
+        sender_name: notifyInputShape.sender_name.describe("Optional display name for this message, for example a project name like 'Cat Design Project'."),
       }),
       outputSchema: notifyOutput,
       annotations: { title: "Send notification", readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
@@ -87,7 +95,8 @@ export function buildServer(session: McpSession | undefined): McpServer {
     async (input) => {
       if (!session) throw new Error("Not authenticated");
       const result = await notify(session, session.user, { agent: session.agent, name: session.agent.name, source: "mcp" }, input);
-      return { content: [{ type: "text", text: summary(result) }], structuredContent: result };
+      const awaitsReply = Boolean(input.expect_reply || input.options?.length) && ["delivered", "partial"].includes(result.status);
+      return { content: [{ type: "text", text: summary(result, awaitsReply) }], structuredContent: result };
     },
   );
 
@@ -119,6 +128,8 @@ export function buildServer(session: McpSession | undefined): McpServer {
       return { content: [{ type: "text", text: [`Status: ${output.status}.`, ...lines].join("\n") }], structuredContent: output };
     },
   );
+
+  registerReplyTools(server, session);
 
   server.registerPrompt(
     "notify-when-done",

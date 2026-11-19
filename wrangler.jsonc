@@ -16,7 +16,8 @@
       "/authorize",
       "/oauth/*",
       "/.well-known/*",
-      "/hooks/*"
+      "/hooks/*",
+      "/media/*"
     ]
   },
   // `bun run setup` creates the database and namespace and adds their ids here.

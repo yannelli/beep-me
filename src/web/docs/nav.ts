@@ -26,6 +26,7 @@ export const DOC_SECTIONS: DocSection[] = [
       { slug: "agents/claude-code", title: "Claude Code", description: "Add Beep Me to Claude Code with one command." },
       { slug: "agents/other-clients", title: "Other MCP clients", description: "Connect any MCP client that supports remote servers." },
       { slug: "agents/scripts", title: "Scripts and CI", description: "Send messages from curl, cron jobs, and CI pipelines with an agent token." },
+      { slug: "agents/replies", title: "Replies and questions", description: "Let agents ask you something, send files, and read your answers." },
       { slug: "agents/access", title: "Agent access", description: "Set each agent's channels and highest priority, and mute or revoke it." },
     ],
   },

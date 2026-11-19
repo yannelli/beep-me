@@ -1,6 +1,17 @@
+import type { AttachmentKind } from "../../shared/api";
 import type { ChannelConfig } from "../../shared/channel-configs";
 import type { ChannelKind, ChannelTarget } from "../../shared/channels";
 import type { Priority } from "../../shared/priority";
+
+/** A file to send. `url` is public; `load()` returns the bytes for channels that upload files. */
+export interface OutboundAttachment {
+  kind: AttachmentKind;
+  name: string;
+  mime: string;
+  size: number | null;
+  url: string;
+  load(): Promise<Uint8Array>;
+}
 
 /** One notification, already routed. Adapters render it for their channel. */
 export interface OutboundMessage {
@@ -19,6 +30,22 @@ export interface OutboundMessage {
   /** True for the channel Test button. */
   test: boolean;
   createdAt: number;
+  attachments: OutboundAttachment[];
+  /** Choices to offer. Channels with buttons show buttons; others list them as "Reply 1 for ...". */
+  options: string[];
+  /** The agent waits for an answer. Channels can show a reply prompt. */
+  expectReply: boolean;
+  /** Optional display name from the agent, shown next to the agent name. Email uses it as the From name. */
+  senderName: string | null;
+}
+
+/** A file that arrived with an interaction. `ref` is provider-specific, for example a Telegram file_id. */
+export interface InboundMedia {
+  kind: AttachmentKind;
+  name: string;
+  mime: string;
+  size: number | null;
+  ref: string;
 }
 
 /** Per-channel map from topic key to the provider's thread reference (Telegram message_thread_id, Discord thread id). */
@@ -77,6 +104,8 @@ export interface ChannelAdapter<K extends ChannelKind> {
   verify?(ctx: VerifyContext<K>): Promise<VerifyResult>;
   /** Runs when identical messages collapse into an earlier one, to show the repeat count. */
   markRepeat?(ctx: SendContext<K>, providerId: string, message: OutboundMessage, count: number): Promise<void>;
+  /** Streams an inbound file to the agent or dashboard. `ref` is the value stored in InboundMedia. */
+  fetchMedia?(ctx: SendContext<K>, ref: string): Promise<Response>;
 }
 
 export type AdapterRegistry = { [K in ChannelKind]: ChannelAdapter<K> };

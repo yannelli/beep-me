@@ -28,6 +28,9 @@ The dashboard talks to the Worker over same-origin JSON under `/api`. The sessio
 | GET | `/api/messages/:id` | | `MessageDTO` |
 | POST | `/api/messages/test` | `SendTestBody` | `MessageDTO` (full pipeline, sender "Beep Me") |
 | GET | `/api/topics` | | `{ items: TopicDTO[] }` |
+| GET | `/api/media/:interaction/:index` | | A file the user sent back, streamed through the channel |
+| * | `/api/integrations/telnyx/*` | | Guided Telnyx setup (numbers, messaging profiles, 10DLC) |
+| * | `/api/integrations/resend/*` | | Resend domains and inbound email setup |
 | PATCH | `/api/topics/:id` | `{ muted: boolean }` | `TopicDTO` |
 | POST | `/auth/logout` | | `{ ok: true }` |
 | DELETE | `/api/account` | | `{ ok: true }` |
@@ -38,3 +41,15 @@ The dashboard talks to the Worker over same-origin JSON under `/api`. The sessio
 | --- | --- | --- | --- |
 | POST | `/mcp` | OAuth access token or `beep_` agent token | MCP Streamable HTTP endpoint |
 | POST | `/v1/notify` | `Authorization: Bearer beep_…` | Send a notification from curl, CI, or cron |
+| GET | `/v1/replies` | `Authorization: Bearer beep_…` | Read answers to this agent's messages, with optional waiting |
+| GET | `/v1/media/:interaction/:index` | `Authorization: Bearer beep_…` | A file the user sent back to this agent |
+
+## Public and webhook endpoints
+
+| Method | Path | Purpose |
+| --- | --- | --- |
+| GET | `/media/:id/:name` | Files agents uploaded, for 7 days. The id is 32 random characters. |
+| POST | `/hooks/telegram/:channel` | Telegram updates, checked with a per-channel secret |
+| POST | `/hooks/sms/:delivery/:signature` | Twilio and Telnyx delivery receipts |
+| POST | `/hooks/telnyx/*` | Inbound Telnyx messages |
+| POST | `/hooks/resend/*` | Inbound email from Resend |

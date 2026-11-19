@@ -139,6 +139,45 @@ export interface UpdateAgentBody {
   mutedUntil?: number | null;
 }
 
+export type AttachmentKind = "image" | "audio" | "video" | "file";
+
+export interface AttachmentDTO {
+  kind: AttachmentKind;
+  name: string;
+  mime: string;
+  size: number | null;
+  /** Public URL. Uploaded files live at /media/<id>/<name> for 7 days. */
+  url: string;
+}
+
+/** reply: free text. choice: a button or numbered option. reaction: an emoji on the message. vote: a poll answer. */
+export type InteractionKind = "reply" | "choice" | "reaction" | "vote";
+
+export interface InteractionMediaDTO {
+  kind: AttachmentKind;
+  name: string;
+  mime: string;
+  size: number | null;
+  /** Authenticated proxy: /api/media/<id>/<index> for the dashboard, <origin>/v1/media/<id>/<index> for agents. */
+  url: string;
+}
+
+export interface InteractionDTO {
+  id: string;
+  messageId: string | null;
+  agentId: string | null;
+  channelId: string;
+  channelKind: ChannelKind;
+  kind: InteractionKind;
+  text: string | null;
+  option: { index: number; label: string } | null;
+  media: InteractionMediaDTO[];
+  /** Who answered, as the channel reports it: a Telegram name, a phone number, an email address. */
+  sender: string | null;
+  createdAt: number;
+  readAt: number | null;
+}
+
 export type MessageStatus = "delivered" | "partial" | "failed" | "muted" | "throttled" | "paused";
 export type MessageSource = "mcp" | "api" | "test" | "system";
 
@@ -162,6 +201,13 @@ export interface MessageDTO {
   source: MessageSource;
   createdAt: number;
   deliveries: DeliveryDTO[];
+  attachments: AttachmentDTO[];
+  /** Choices the agent offered, in order. Option 1 is index 0. */
+  options: string[];
+  expectReply: boolean;
+  /** Optional display name the agent set for this message, for example a project name. */
+  senderName: string | null;
+  interactions: InteractionDTO[];
 }
 
 export type DeliveryStatus = "pending" | "sent" | "delivered" | "failed";

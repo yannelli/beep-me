@@ -36,9 +36,20 @@ export function topicTag(message: OutboundMessage): string | null {
   return `#${tag || message.topic.key}`;
 }
 
+/** "Cat Design Project (Claude Code)" when the agent set a sender name, else the agent name. */
+export function senderLabel(message: OutboundMessage): string {
+  return message.senderName ? `${message.senderName} (${message.agent.name})` : message.agent.name;
+}
+
+/** "Reply with a number: 1) Ship it 2) Wait" for channels that cannot show buttons. */
+export function optionsText(message: OutboundMessage): string | null {
+  if (!message.options.length) return message.expectReply ? "Reply to this message to answer." : null;
+  return `Reply with a number: ${message.options.map((option, index) => `${index + 1}) ${option}`).join("  ")}`;
+}
+
 /** "🟠 High · agent · #topic", with a test tag on test messages. */
 export function metaLine(message: OutboundMessage): string {
-  return [message.test ? TEST_TAG : null, priorityText(message), message.agent.name, topicTag(message)]
+  return [message.test ? TEST_TAG : null, priorityText(message), senderLabel(message), topicTag(message)]
     .filter((part): part is string => Boolean(part))
     .join(DOT);
 }
@@ -58,7 +69,7 @@ export const TELEGRAM_LIMIT = 4096;
 export function telegramHtml(message: OutboundMessage, footer = ""): string {
   const { headline, body } = parts(message);
   const info = PRIORITY_INFO[message.priority];
-  const metaRest = [message.agent.name, topicTag(message)].filter(Boolean).join(DOT);
+  const metaRest = [senderLabel(message), topicTag(message)].filter(Boolean).join(DOT);
   const meta = `${message.test ? `${TEST_TAG}${DOT}` : ""}${info.emoji} <b>${info.label}</b>${DOT}${escapeHtml(metaRest)}`;
   const urlText = message.url ? clip(message.url, 200) : "";
   const link = !message.url ? "" : isHttpUrl(message.url) ? `<a href="${escapeHtml(message.url)}">${escapeHtml(urlText)}</a>` : escapeHtml(urlText);
@@ -98,14 +109,14 @@ export interface DiscordEmbed {
 export function discordEmbed(message: OutboundMessage): DiscordEmbed {
   const { headline, body } = parts(message);
   const info = PRIORITY_INFO[message.priority];
-  const lead = `${message.test ? `${TEST_TAG}${DOT}` : ""}${info.emoji} **${info.label}**${DOT}${message.agent.name}`;
+  const lead = `${message.test ? `${TEST_TAG}${DOT}` : ""}${info.emoji} **${info.label}**${DOT}${senderLabel(message)}`;
   const link = message.url && !isHttpUrl(message.url) ? `\n${message.url}` : "";
   return {
     title: clip(headline, 256),
     description: clip(`${lead}\n\n${body}${link}`.trim(), 4096),
     color: parseInt(PRIORITY_COLOR[message.priority].slice(1), 16),
     ...(isHttpUrl(message.url) ? { url: message.url } : {}),
-    footer: { text: clip([message.agent.name, message.topic?.name].filter(Boolean).join(DOT), 2048) },
+    footer: { text: clip([senderLabel(message), message.topic?.name].filter(Boolean).join(DOT), 2048) },
     timestamp: new Date(message.createdAt).toISOString(),
   };
 }

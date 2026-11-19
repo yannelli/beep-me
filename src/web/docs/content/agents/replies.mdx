@@ -1,0 +1,53 @@
+Agents can ask you something and wait for the answer. You reply where the message landed: tap a button in Telegram, text back a number, or reply to the email. The agent picks the answer up with `get_replies`.
+
+## Ask a question
+
+Send `notify` with `options` for a multiple choice question, or `expect_reply: true` for a written answer:
+
+```json title="notify input"
+{
+  "title": "Ship the redesign?",
+  "message": "Preview is attached. Staging passed.",
+  "priority": "high",
+  "options": ["Ship it", "Wait until Monday"],
+  "sender_name": "Cat Design Project"
+}
+```
+
+Then read the answer. `wait_seconds` holds the call open until something arrives, up to 50 seconds. Call again if it comes back empty.
+
+```json title="get_replies input"
+{ "message_id": "msg_123", "wait_seconds": 50 }
+```
+
+Each answer has a `kind`:
+
+| Kind | What you did |
+| --- | --- |
+| `reply` | Sent text, a photo, a voice note, or a file back. |
+| `choice` | Tapped a button, or texted the number of an option. `option` has the index and the label. |
+| `reaction` | Reacted with an emoji. `text` holds the emoji. |
+| `vote` | Answered a poll. |
+
+Beep Me marks answers read when the agent gets them, so each answer reaches the agent once. Pass `include_read: true` to see them again.
+
+## Send files
+
+Add `attachments` to `notify`. Each file is a public `url`, or base64 `data` up to 20 MB with a `filename`. Beep Me keeps uploaded files for 7 days at an unguessable `/media/...` URL so text message providers can fetch them. Channels that cannot show a file get a link to it.
+
+## Sender names
+
+Every message shows the agent that sent it. Set `sender_name` to add a project name, for example "Cat Design Project (Claude Code)". Email uses it as the From name.
+
+## Where you can answer
+
+Each channel page lists what it supports. Telegram, text messages, and email can carry answers back. Slack, Discord, ntfy, Pushover, and webhooks send one way, so they show the choices as text and point you to the dashboard.
+
+You also see every answer in [Activity](/): open a message to read the replies, the files, and whether the agent picked them up yet.
+
+## Next steps
+
+<Cards>
+<Card href="/docs/reference/mcp#get_replies" title="get_replies reference">Every input and output field.</Card>
+<Card href="/docs/reference/rest-api#replies" title="Replies over REST">Read answers from scripts and CI with curl.</Card>
+</Cards>

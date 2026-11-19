@@ -27,6 +27,9 @@ export function MessageRow({ message, onOpen, now }: { message: MessageDTO; onOp
             {message.topic && <Badge>#{message.topic.name}</Badge>}
             {message.status !== "delivered" && <Badge tone={status.tone}>{status.label}</Badge>}
             {message.repeatCount > 1 && <Badge tone="accent">×{message.repeatCount}</Badge>}
+            {message.interactions.length > 0 && <Badge tone="ok">{message.interactions.length === 1 ? "1 reply" : `${message.interactions.length} replies`}</Badge>}
+            {message.interactions.length === 0 && message.expectReply && <Badge tone="warn">Awaiting reply</Badge>}
+            {message.attachments.length > 0 && <Badge>{message.attachments.length === 1 ? "1 file" : `${message.attachments.length} files`}</Badge>}
             {message.quiet && (
               <Badge>
                 <Moon className="size-3" aria-hidden />

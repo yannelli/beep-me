@@ -7,6 +7,7 @@ import { Avatar, Badge, BrandDot, ErrorBox, PriorityChip, SkeletonList } from ".
 import { errorMessage } from "../../lib/api";
 import { dateTime, destinationName } from "../../lib/format";
 import { useQuery } from "../../lib/query";
+import { MessageExtras } from "./MessageExtras";
 import { DELIVERY_STATUS, MESSAGE_STATUS } from "./status";
 
 const sources: Record<MessageDTO["source"], string> = { mcp: "MCP", api: "API", test: "Test", system: "Beep Me" };
@@ -33,7 +34,7 @@ export function MessageSheet({ id, initial, onClose }: { id: string | null; init
           <div className="flex items-center gap-3">
             <Avatar name={message.agentName} size={36} />
             <div className="min-w-0">
-              <p className="truncate font-medium">{message.agentName}</p>
+              <p className="truncate font-medium">{message.senderName ? `${message.senderName} (${message.agentName})` : message.agentName}</p>
               <p className="text-sm text-muted">{dateTime(message.createdAt)}</p>
             </div>
           </div>
@@ -44,6 +45,7 @@ export function MessageSheet({ id, initial, onClose }: { id: string | null; init
               <ExternalLink className="size-4 shrink-0" aria-hidden />
             </a>
           )}
+          <MessageExtras message={message} />
 
           <dl className="rounded-xl border border-line px-3">
             <Row label="Priority">

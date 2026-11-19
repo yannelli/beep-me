@@ -7,8 +7,15 @@ import { v1Routes } from "./api/v1";
 import { consentRoutes } from "./auth/consent";
 import { authRoutes } from "./auth/google";
 import { isSameOriginWrite, publicOrigin, sessionUser, type AppEnv } from "./auth/session";
+import { serveMedia } from "./core/media";
+import { interactionMedia } from "./core/replies";
+import { getInteraction } from "./db/interactions";
+import { resendHook } from "./hooks/resend";
 import { smsHook } from "./hooks/sms";
 import { telegramHook } from "./hooks/telegram";
+import { telnyxHook } from "./hooks/telnyx";
+import { resendIntegration } from "./integrations/resend";
+import { telnyxIntegration } from "./integrations/telnyx";
 
 export function createApp(): Hono<AppEnv> {
   const app = new Hono<AppEnv>();
@@ -22,6 +29,9 @@ export function createApp(): Hono<AppEnv> {
   app.route("/v1", v1Routes);
   app.route("/hooks/telegram", telegramHook);
   app.route("/hooks/sms", smsHook);
+  app.route("/hooks/telnyx", telnyxHook);
+  app.route("/hooks/resend", resendHook);
+  app.get("/media/:id/:name", (c) => serveMedia(c.env, c.req.param("id")));
   app.route("/api", publicApi);
 
   const api = new Hono<AppEnv>();
@@ -35,6 +45,13 @@ export function createApp(): Hono<AppEnv> {
   api.route("/", meApi);
   api.route("/channels", channelsApi);
   api.route("/agents", agentsApi);
+  api.route("/integrations/telnyx", telnyxIntegration);
+  api.route("/integrations/resend", resendIntegration);
+  api.get("/media/:interaction/:index", async (c) => {
+    const row = await getInteraction(c.env.DB, c.req.param("interaction"));
+    if (!row || row.user_id !== c.get("user").id) return c.json({ error: "Not found" }, 404);
+    return interactionMedia(c.env, row, Number(c.req.param("index")));
+  });
   api.route("/", messagesApi);
   app.route("/api", api);
 

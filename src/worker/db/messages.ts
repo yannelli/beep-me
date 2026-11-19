@@ -1,6 +1,7 @@
-import type { DeliveryDTO, DeliveryStatus, MessageDTO, MessagePage, MessageSource, MessageStatus } from "../../shared/api";
+import type { AttachmentDTO, DeliveryDTO, DeliveryStatus, MessageDTO, MessagePage, MessageSource, MessageStatus } from "../../shared/api";
 import type { ChannelKind, ChannelTarget } from "../../shared/channels";
 import { isPriority, type Priority } from "../../shared/priority";
+import { interactionsFor, toInteractionDTO, type InteractionRow } from "./interactions";
 
 export interface NewMessage {
   id: string;
@@ -19,27 +20,33 @@ export interface NewMessage {
   quiet: boolean;
   source: MessageSource;
   createdAt: number;
+  attachments: AttachmentDTO[];
+  options: string[];
+  expectReply: boolean;
+  senderName: string | null;
 }
 
 const MESSAGE_COLUMNS =
-  "id, user_id, agent_id, agent_name, priority, requested_priority, topic_key, topic_name, title, body, url, dedupe_hash, status, notes, quiet, source, created_at";
+  "id, user_id, agent_id, agent_name, priority, requested_priority, topic_key, topic_name, title, body, url, dedupe_hash, status, notes, quiet, source, created_at, attachments, options, expect_reply, sender_name";
+const MESSAGE_PLACEHOLDERS = Array(21).fill("?").join(", ");
 
 function messageValues(m: NewMessage): unknown[] {
   return [
     m.id, m.userId, m.agentId, m.agentName, m.priority, m.requestedPriority, m.topic?.key ?? null, m.topic?.name ?? null,
     m.title, m.body, m.url, m.dedupeHash, m.status, JSON.stringify(m.notes), m.quiet ? 1 : 0, m.source, m.createdAt,
+    JSON.stringify(m.attachments), JSON.stringify(m.options), m.expectReply ? 1 : 0, m.senderName,
   ];
 }
 
 export async function insertMessage(db: D1Database, m: NewMessage): Promise<void> {
-  await db.prepare(`INSERT INTO messages (${MESSAGE_COLUMNS}) VALUES (${"?, ".repeat(16)}?)`).bind(...messageValues(m)).run();
+  await db.prepare(`INSERT INTO messages (${MESSAGE_COLUMNS}) VALUES (${MESSAGE_PLACEHOLDERS})`).bind(...messageValues(m)).run();
 }
 
 /** Inserts only while the agent sent fewer than `limit` counted messages since `since`. One statement, so parallel calls cannot both pass. */
 export async function insertMessageUnderCap(db: D1Database, m: NewMessage, limit: number, since: number): Promise<boolean> {
   const row = await db
     .prepare(
-      `INSERT INTO messages (${MESSAGE_COLUMNS}) SELECT ${"?, ".repeat(16)}?
+      `INSERT INTO messages (${MESSAGE_COLUMNS}) SELECT ${MESSAGE_PLACEHOLDERS}
        WHERE (SELECT COUNT(*) FROM messages WHERE agent_id = ? AND created_at > ? AND status NOT IN ('throttled', 'muted', 'paused')) < ?
        RETURNING id`,
     )
@@ -185,11 +192,15 @@ interface MessageRow {
   quiet: number;
   source: MessageSource;
   created_at: number;
+  attachments: string;
+  options: string;
+  expect_reply: number;
+  sender_name: string | null;
 }
 
 const FINAL_STATUSES = new Set(["delivered", "partial", "failed", "muted", "throttled", "paused"]);
 
-function toMessageDTO(row: MessageRow, deliveries: DeliveryRow[]): MessageDTO {
+function toMessageDTO(row: MessageRow, deliveries: DeliveryRow[], interactions: InteractionRow[]): MessageDTO {
   return {
     id: row.id,
     agentId: row.agent_id,
@@ -208,6 +219,11 @@ function toMessageDTO(row: MessageRow, deliveries: DeliveryRow[]): MessageDTO {
     source: row.source,
     createdAt: row.created_at,
     deliveries: deliveries.filter((d) => d.message_id === row.id).map(toDeliveryDTO),
+    attachments: JSON.parse(row.attachments) as AttachmentDTO[],
+    options: JSON.parse(row.options) as string[],
+    expectReply: row.expect_reply === 1,
+    senderName: row.sender_name,
+    interactions: interactions.filter((i) => i.message_id === row.id).map((i) => toInteractionDTO(i)),
   };
 }
 
@@ -238,19 +254,23 @@ export async function listMessages(db: D1Database, userId: string, filters: Mess
     .bind(...values, limit + 1)
     .all<MessageRow>();
   const page = results.slice(0, limit);
-  const deliveries = await deliveriesFor(db, page.map((row) => row.id));
+  const ids = page.map((row) => row.id);
+  const [deliveries, interactions] = await Promise.all([deliveriesFor(db, ids), interactionsFor(db, ids)]);
   const last = page.at(-1);
-  return { items: page.map((row) => toMessageDTO(row, deliveries)), nextBefore: results.length > limit && last ? last.created_at : null };
+  return { items: page.map((row) => toMessageDTO(row, deliveries, interactions)), nextBefore: results.length > limit && last ? last.created_at : null };
 }
 
 export async function getMessage(db: D1Database, userId: string, id: string): Promise<MessageDTO | null> {
   const row = await db.prepare("SELECT * FROM messages WHERE id = ? AND user_id = ?").bind(id, userId).first<MessageRow>();
-  return row ? toMessageDTO(row, await deliveriesFor(db, [id])) : null;
+  if (!row) return null;
+  const [deliveries, interactions] = await Promise.all([deliveriesFor(db, [id]), interactionsFor(db, [id])]);
+  return toMessageDTO(row, deliveries, interactions);
 }
 
 export async function pruneMessages(db: D1Database, olderThan: number): Promise<void> {
   await db.batch([
     db.prepare("DELETE FROM deliveries WHERE created_at < ?").bind(olderThan),
+    db.prepare("DELETE FROM interactions WHERE created_at < ?").bind(olderThan),
     db.prepare("DELETE FROM messages WHERE created_at < ?").bind(olderThan),
     db.prepare("DELETE FROM link_codes WHERE expires_at < ?").bind(Date.now()),
   ]);

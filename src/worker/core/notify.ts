@@ -22,10 +22,10 @@ import { normalizeTopic, touchTopic, type TopicRef } from "../db/topics";
 import type { User } from "../db/users";
 import { randomId, sha256Hex } from "../lib/crypto";
 import { deliverAll, sendContext } from "./deliver";
+import { httpUrl, notifyExtrasShape, prepareAttachments } from "./extras";
+import { toOutboundAttachment } from "./media";
 import { formatClock } from "./quiet";
 import { planRoute } from "./routing";
-
-const httpUrl = z.string().trim().max(2000).url().refine((value) => /^https?:\/\//i.test(value), "Use an http or https URL.");
 
 export const notifyInputShape = {
   message: z.string().trim().min(1).max(4000),
@@ -34,6 +34,7 @@ export const notifyInputShape = {
   topic: z.string().trim().max(64).nullish(),
   url: httpUrl.nullish(),
   dedupe_key: z.string().trim().max(200).nullish(),
+  ...notifyExtrasShape,
 };
 export const notifyInputSchema = z.object(notifyInputShape);
 export type NotifyInput = z.infer<typeof notifyInputSchema>;
@@ -92,6 +93,7 @@ export async function notify(run: RunContext, user: User, sender: Sender, input:
   const hashSource = input.dedupe_key
     ? `key\u0000${agent?.id ?? sender.name}\u0000${input.dedupe_key}`
     : [agent?.id ?? sender.name, topic?.key ?? "", title ?? "", input.message].join("\u0000");
+  const attachments = await prepareAttachments(env, origin, input.attachments);
   const message: NewMessage = {
     id: randomId("msg"),
     userId: user.id,
@@ -109,6 +111,10 @@ export async function notify(run: RunContext, user: User, sender: Sender, input:
     quiet: false,
     source: sender.source,
     createdAt: now,
+    attachments,
+    options: input.options ?? [],
+    expectReply: input.expect_reply === true || Boolean(input.options?.length),
+    senderName: input.sender_name ?? null,
   };
   const result = (status: NotifyResult["status"], extra: Partial<NotifyResult> = {}): NotifyResult => ({
     id: message.id,
@@ -180,6 +186,10 @@ export async function notify(run: RunContext, user: User, sender: Sender, input:
     appUrl: `${origin}/?message=${message.id}`,
     test: sender.source === "test",
     createdAt: now,
+    attachments: attachments.map((attachment) => toOutboundAttachment(env, origin, attachment)),
+    options: message.options,
+    expectReply: message.expectReply,
+    senderName: message.senderName,
   };
   const { outcomes, notes: deliveryNotes } = await deliverAll(env, origin, outbound, plan.deliveries, {
     messageId: message.id,
@@ -213,6 +223,10 @@ async function markRepeats(run: RunContext, user: User, messageId: string, count
     appUrl: `${run.origin}/?message=${original.id}`,
     test: original.source === "test",
     createdAt: original.createdAt,
+    attachments: original.attachments.map((attachment) => toOutboundAttachment(run.env, run.origin, attachment)),
+    options: original.options,
+    expectReply: original.expectReply,
+    senderName: original.senderName,
   };
   for (const delivery of await deliveriesFor(run.env.DB, [messageId])) {
     const adapter = adapters[delivery.channel_kind] as ChannelAdapter<ChannelKind>;

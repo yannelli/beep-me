@@ -128,11 +128,16 @@ channelsApi.post("/:id/test", async (c) => {
     appUrl: c.get("origin"),
     test: true,
     createdAt: now,
+    attachments: [],
+    options: [],
+    expectReply: false,
+    senderName: null,
   };
   message.appUrl = `${c.get("origin")}/?message=${message.id}`;
   await insertMessage(c.env.DB, {
     id: message.id, userId: user.id, agentId: null, agentName: "Beep Me", priority: "medium", requestedPriority: "medium", topic,
     title: message.title, body: message.body, url: null, dedupeHash: message.id, status: "pending", notes: [], quiet: false, source: "test", createdAt: now,
+    attachments: [], options: [], expectReply: false, senderName: null,
   });
   const deliveryId = randomId("dlv");
   await insertDelivery(c.env.DB, {

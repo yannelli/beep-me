@@ -72,6 +72,7 @@ function message(i: number, agentIndex: number, priority: Priority, title: strin
     deliveries: [
       { id: `d_${i}`, channelId: "ch_telegram", channelKind: "telegram", channelName: "Telegram", target: "main", status: "delivered", detail: null, updatedAt: now - i * 23 * min },
     ],
+    attachments: [], options: [], expectReply: false, senderName: null, interactions: [],
     ...extra,
   };
 }

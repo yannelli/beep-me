@@ -76,6 +76,10 @@ Beep Me trims spaces from the start and end of each text field before it checks 
 | `topic` | string or null | No | Up to 64 characters | None |
 | `url` | string or null | No | An `http` or `https` URL, up to 2000 characters | None |
 | `dedupe_key` | string or null | No | Up to 200 characters. JSON only. | None |
+| `attachments` | array | No | Up to 10 files: `url` or base64 `data` (20 MB), plus `filename` and `mime_type`. JSON only. | None |
+| `options` | string array | No | 2 to 10 choices, each up to 64 characters. JSON only. | None |
+| `expect_reply` | boolean | No | JSON only. | `false`, or `true` when `options` is set |
+| `sender_name` | string | No | Up to 80 characters. JSON only. | The agent name |
 
 Beep Me lowers `priority` to the agent's highest priority. The response shows both values. See [Priorities](/docs/routing/priorities).
 
@@ -156,6 +160,36 @@ Some `fields` messages from Beep Me:
 | `url` | `Use an http or https URL.` |
 
 Other validation messages come from the schema library. They name the limit that failed.
+
+## Replies
+
+`GET /v1/replies` returns what the user sent back to this agent's notifications. It takes the same token and the same options as the [get_replies](/docs/reference/mcp#get_replies) tool, as query parameters:
+
+```sh
+curl "https://your-beep-me.example/v1/replies?message_id=msg_123&wait_seconds=30" \
+  -H "Authorization: Bearer $BEEPME_TOKEN"
+```
+
+```json
+{
+  "replies": [
+    {
+      "id": "int_7Fq2",
+      "messageId": "msg_123",
+      "kind": "choice",
+      "text": null,
+      "option": { "index": 0, "label": "Ship it" },
+      "media": [],
+      "channelKind": "telegram",
+      "sender": "Ryan",
+      "createdAt": 1795051863752
+    }
+  ],
+  "waited_seconds": 8
+}
+```
+
+Files the user sent come from `GET /v1/media/<interaction id>/<index>` with the same token. Only the agent that sent the original message can read them.
 
 ## Next steps
 
