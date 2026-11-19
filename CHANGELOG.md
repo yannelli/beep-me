@@ -2,6 +2,17 @@
 
 All notable changes to Beep Me are documented here. Versions follow [Semantic Versioning](https://semver.org/). Commits follow [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/); see [CONTRIBUTING.md](CONTRIBUTING.md#versions) for how they map to releases.
 
+## [0.5.0] - 2026-11-19
+
+### Added
+
+- **email:** link one-way email questions to the dashboard answer form ([9523ec9](https://github.com/yannelli/beep-me/commit/9523ec9f15df691cad062431f6783f144e646a27))
+- **resend:** per-agent addresses, email replies, attachments, and guided domain setup ([41e3967](https://github.com/yannelli/beep-me/commit/41e396732b751d8d37a48f38cc78ac9d68a69b7d))
+
+### Fixed
+
+- **resend:** let a channel start without From and finish setup in the domain card ([ab28428](https://github.com/yannelli/beep-me/commit/ab28428f1b39ea9af7fd6eb8c963c28d33601eb5))
+
 ## [0.4.0] - 2026-11-19
 
 ### Added
