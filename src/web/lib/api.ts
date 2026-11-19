@@ -30,7 +30,7 @@ async function parseError(response: Response): Promise<ApiError> {
   const text = await response.text().catch(() => "");
   try {
     const parsed = JSON.parse(text) as Partial<ApiError>;
-    if (typeof parsed.error === "string") return { error: parsed.error, fields: parsed.fields };
+    if (typeof parsed.error === "string") return { error: parsed.error, fields: parsed.fields, preview: parsed.preview };
   } catch {
     // Plain-text bodies fall through.
   }

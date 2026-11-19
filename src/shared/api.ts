@@ -6,6 +6,8 @@ import type { UserSettings } from "./settings";
 export interface ApiError {
   error: string;
   fields?: Record<string, string>;
+  /** What the change would do, sent with a 409 when a setup change needs confirm: true. */
+  preview?: unknown;
 }
 
 export interface SessionResponse {

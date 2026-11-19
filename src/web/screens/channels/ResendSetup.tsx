@@ -1,9 +1,9 @@
 import { useState } from "react";
-import type { ApiError, ChannelDTO } from "../../../shared/api";
+import type { ChannelDTO } from "../../../shared/api";
 import type { ResendPreview, ResendSetupState } from "../../../shared/resend";
 import { ConfirmSheet } from "../../components/Sheet";
 import { ErrorBox, Skeleton } from "../../components/ui";
-import { api, ApiRequestError, errorMessage, UNAUTHORIZED_EVENT } from "../../lib/api";
+import { api, ApiRequestError, errorMessage } from "../../lib/api";
 import { invalidate, useQuery } from "../../lib/query";
 import { useToast } from "../../lib/toast";
 import { ResendDomain } from "./ResendDomain";
@@ -20,23 +20,11 @@ export interface ResendAction {
 
 export type RunAction = (action: ResendAction) => void;
 
-/** Sends the change without confirm and returns the summary from the 409 preview. */
-async function fetchPreview(path: string, body: Record<string, unknown>): Promise<string> {
-  let response: Response;
-  try {
-    response = await fetch(path, {
-      method: "POST",
-      credentials: "same-origin",
-      headers: { accept: "application/json", "content-type": "application/json" },
-      body: JSON.stringify(body),
-    });
-  } catch {
-    throw new ApiRequestError(0, { error: "Beep Me is offline. Check your connection. Then try again." });
-  }
-  const json = (await response.json().catch(() => ({}))) as Partial<ResendPreview> & Partial<ApiError>;
-  if (response.status === 409 && json.preview) return json.preview.summary;
-  if (response.status === 401) window.dispatchEvent(new Event(UNAUTHORIZED_EVENT));
-  throw new ApiRequestError(response.status, { error: json.error ?? `Request failed (${response.status}).`, fields: json.fields });
+/** Every change without confirm answers 409 with a preview. Returns its summary, or null for other errors. */
+function previewSummary(error: unknown): string | null {
+  if (!(error instanceof ApiRequestError) || error.status !== 409) return null;
+  const preview = error.body.preview as Partial<ResendPreview["preview"]> | undefined;
+  return typeof preview?.summary === "string" ? preview.summary : null;
 }
 
 export function ResendSetup({ channel }: { channel: ChannelDTO }) {
@@ -49,10 +37,12 @@ export function ResendSetup({ channel }: { channel: ChannelDTO }) {
 
   const run: RunAction = (action) => {
     setBusyPath(action.path);
-    fetchPreview(action.path, action.body ?? {})
-      .then((summary) => setPending({ action, summary }))
+    api
+      .post(action.path, action.body ?? {})
       .catch((error: unknown) => {
-        if (action.onError) action.onError(error);
+        const summary = previewSummary(error);
+        if (summary !== null) setPending({ action, summary });
+        else if (action.onError) action.onError(error);
         else toast(errorMessage(error), "error");
       })
       .finally(() => setBusyPath(null));
