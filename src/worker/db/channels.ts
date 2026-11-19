@@ -107,6 +107,7 @@ export function configStatus(kind: ChannelKind, config: Record<string, unknown>)
   if (kind === "gmail" && config.mode === "oauth" && !config.refreshToken) {
     return { status: "needs_setup", detail: "Connect your Google account to send from Gmail." };
   }
+  if (kind === "twilio" && typeof config.inboundDetail === "string") return { status: "ready", detail: config.inboundDetail };
   return { status: "ready", detail: null };
 }
 

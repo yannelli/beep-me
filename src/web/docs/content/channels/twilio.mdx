@@ -1,4 +1,4 @@
-Twilio sends Beep Me messages as text messages (SMS) from your Twilio number to your mobile phone. With automatic routes, Urgent and High messages go to your first text message channel. Beep Me keeps each text within two SMS segments.
+Twilio sends Beep Me messages as text messages (SMS or MMS) from your Twilio number to your mobile phone. You can text back to answer an agent. With automatic routes, Urgent and High messages go to your first text message channel. Beep Me keeps each text within two SMS segments.
 
 ## Before you start
 
@@ -35,6 +35,8 @@ Open [Channels](/channels). Select **Add channel**. Select **Twilio SMS**. Fill 
 
 Beep Me checks your account with Twilio. It shows an error if Twilio does not accept the keys.
 
+On an `https://` deployment, Beep Me also points the incoming message URL of your number at Beep Me, so you can text back. It does this only when the URL is empty, the Twilio demo URL, or an older URL of this channel. The channel shows the result, for example "Replies are on." See [Replies](#replies).
+
 ### Send a test
 
 Select **Test**. You get this text:
@@ -54,13 +56,14 @@ This is a test for Twilio SMS. If you can read it, this channel works.
 ## How messages look
 
 ```text
-Beep Me: Claude Code (High, #api)
-Deploy failed
-The migration step timed out after 10 minutes.
+Beep Me: Cat Design Project (Claude Code) (High, #api)
+Ship the redesign?
+Preview is attached. Staging passed.
 https://example.com/run/42
+Reply with a number: 1) Ship it 2) Wait until Monday
 ```
 
-The first line shows the agent name, the priority, and the topic. The title, the body, and the link follow.
+The first line shows the sender name when the agent sets one, the agent name, the priority, and the topic. The title, the body, and the link follow. A question ends with the choices, or with "Reply to this message to answer."
 
 ### Length and characters
 
@@ -69,7 +72,35 @@ Beep Me keeps each text within two SMS segments:
 - Beep Me changes characters that the GSM-7 SMS alphabet does not have. Curly quotes become straight quotes. Dashes, `·`, and `•` become `-`. `…` becomes `...`, and `×` becomes `x`. Beep Me removes emoji.
 - When the whole text uses GSM-7, the limit is 306 units (two segments of 153). The characters `^ { } \ [ ~ ] |` and `€` use two units each.
 - When the text has other characters, such as Chinese or Cyrillic letters, the limit is 134 characters (two segments of 67).
-- A longer text ends with `...`. Beep Me keeps the link complete when the link uses half of the limit or less.
+- A longer text ends with `...`. Beep Me cuts the body first. It keeps the choices, the link, and the file links complete while they use two thirds of the limit or less.
+
+## Files
+
+Beep Me sends JPEG, PNG, and GIF images as MMS to numbers in the US, Canada (`+1`), and Australia (`+61`). It sends up to 10 images and 5 MB in total. Twilio resizes the images for the carrier.
+
+Other files, files over the limit, and files to other countries arrive as links in the text. Each file must be at a public `https://` address. Files that an agent uploads have one on an `https://` deployment.
+
+If Twilio refuses the MMS, Beep Me sends the text again with every file as a link. The [delivery log](/docs/routing/delivery-log) then shows `Sent the files as links. MMS failed: ...`.
+
+## Replies
+
+Text the Twilio number from your mobile number to answer. Beep Me connects the text to the newest message that it sent to you in the last 24 hours. It prefers a message that asked a question.
+
+- A number, such as `2`, picks that choice. The exact text of a choice also works, for example `ship it`.
+- Any other text is a reply. A number with no matching choice is also a reply.
+- Photos that you send by MMS arrive with the reply. Beep Me downloads them from Twilio with your Account SID and Auth token.
+- A text that does not match a message still shows in [Activity](/).
+
+The agent reads answers with `get_replies`. See [Replies](/docs/agents/replies).
+
+Beep Me checks the `X-Twilio-Signature` header of each text with your Auth token. It ignores texts from other numbers and the carrier keywords that Twilio answers itself: `STOP`, `STOPALL`, `UNSUBSCRIBE`, `CANCEL`, `END`, `QUIT`, `OPTOUT`, `REVOKE`, `HELP`, `INFO`, `START`, and `UNSTOP`. If a choice is one of these words, text its number instead. Twilio also treats `YES` as an opt-in, but Beep Me records it as a reply.
+
+Beep Me sets the incoming message URL only for a phone number in **From**. For a Messaging Service (`MG...`), or a number that sends texts to another app, the channel shows the URL. Set it yourself in the Twilio Console:
+
+- For a number, set **A message comes in** to the URL, with **HTTP POST**.
+- For a Messaging Service, set the incoming messages URL of the service to the URL.
+
+Replies need an `https://` deployment. On `http://localhost`, the channel shows "Replies need an https deployment."
 
 ## US registration
 
@@ -107,6 +138,9 @@ On an `http://` address, such as local development, Beep Me does not ask for rec
 | "Twilio 21608: ..." | Your trial account cannot text this number. Verify the number in Twilio, or upgrade the account. |
 | "Twilio error 30034" | Your 10-digit number has no approved A2P 10DLC campaign. Complete the registration. |
 | "Twilio error 30032" | Your toll-free number is not verified. Complete toll-free verification. |
+| "Replies are off: ... sends incoming texts to another URL." | Another app gets the texts. To use Beep Me, set the incoming message URL of the number to the URL in the message. |
+| Replies do not arrive | Text from the number in **Your mobile number**. If you changed the Auth token, open the channel and save the new token. |
+| `Sent the files as links. MMS failed: ...` | Twilio refused the files. Send JPEG, PNG, or GIF images, 5 MB or less in total. |
 | "Text limit reached" | The agent reached its text cap. Wait, or raise the cap on the agent's page. |
 
 For other Twilio codes, see the [Twilio error list](https://www.twilio.com/docs/api/errors).

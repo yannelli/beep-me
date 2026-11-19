@@ -31,12 +31,20 @@ export const channelConfigSchemas = {
     authToken: z.string().trim().min(16, "Paste the full auth token."),
     from: z.string().trim().regex(/^(\+[1-9]\d{6,14}|MG[0-9a-fA-F]{32})$/, "Use a number like +15551234567 or a Messaging Service SID (MG…)."),
     to: phone,
+    /** Path secret of the inbound URL /hooks/sms/twilio/<channel>/<token>. */
+    webhookToken: z.string().optional(),
+    /** Result of pointing the number's incoming message URL at Beep Me. */
+    inboundDetail: z.string().optional(),
   }),
   telnyx: z.object({
     apiKey: z.string().trim().min(16, "Paste the full API key."),
     from: phone,
     to: phone,
     messagingProfileId: optionalText,
+    /** Ed25519 public key of the Telnyx account (Base64). Inbound webhooks must carry a valid signature. */
+    publicKey: optionalText.refine((value) => !value || /^[A-Za-z0-9+/]{43}=$/.test(value), "Paste the public key from Keys & Credentials in the Telnyx portal."),
+    /** Path secret of the inbound URL /hooks/telnyx/<channel>/<token>. */
+    webhookToken: z.string().optional(),
   }),
   resend: z.object({
     apiKey: z.string().trim().startsWith("re_", "Resend API keys start with re_."),
