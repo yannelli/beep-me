@@ -1,4 +1,4 @@
-import type { ApiError } from "../../shared/api";
+import type { ApiError, MessageDTO } from "../../shared/api";
 
 export class ApiRequestError extends Error {
   readonly status: number;
@@ -68,6 +68,9 @@ export const api = {
   patch: <T>(path: string, body: unknown) => request<T>("PATCH", path, body),
   del: <T>(path: string) => request<T>("DELETE", path),
 };
+
+export const ackMessage = (id: string) => api.post<MessageDTO>(`/api/messages/${id}/ack`);
+export const cancelFallbacks = (id: string) => api.post<MessageDTO>(`/api/messages/${id}/fallbacks/cancel`);
 
 export function errorMessage(error: unknown): string {
   if (error instanceof ApiRequestError) return error.body.error;

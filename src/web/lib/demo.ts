@@ -84,6 +84,12 @@ let messages: MessageDTO[] = fresh ? [] : [
     deliveries: [
       { id: "d_a", channelId: "ch_telegram", channelKind: "telegram", channelName: "Telegram", target: "topic", status: "delivered", detail: null, reason: null, updatedAt: now },
       { id: "d_b", channelId: "ch_twilio", channelKind: "twilio", channelName: "Phone (SMS)", target: "main", status: "sent", detail: "Twilio SID SM8a1f…", reason: null, updatedAt: now },
+      { id: "d_e", channelId: "ch_ntfy", channelKind: "ntfy", channelName: "ntfy push", target: "main", status: "sent", detail: null, reason: "No answer after 5 minutes.", updatedAt: now - 3 * min },
+    ],
+    createdAt: now - 8 * min,
+    fallbacks: [
+      { id: "fb_a", when: "no_reply", afterMinutes: 5, dueAt: now - 3 * min, status: "sent", channels: ["ntfy push"], priority: null, source: "settings", detail: null, firedAt: now - 3 * min },
+      { id: "fb_b", when: "no_reply", afterMinutes: 30, dueAt: now + 22 * min, status: "pending", channels: ["Phone (SMS)", "Telegram"], priority: "urgent", source: "settings", detail: null, firedAt: null },
     ],
   }),
   message(1, 2, "high", "Tests failing on main", "12 of 840 tests fail in packages/billing after the last merge.", { topic: { key: "ci", name: "CI" }, repeatCount: 3, lastRepeatAt: now - 5 * min }),
@@ -98,7 +104,13 @@ let messages: MessageDTO[] = fresh ? [] : [
     ],
   }),
   message(5, 3, "medium", "Backup complete", "Nightly backup wrote 2.3 GB to R2.", { status: "muted", deliveries: [], notes: ["Agent is muted until 6:00 PM."] }),
-  message(6, 0, "high", "Waiting for approval", "I need your OK to run the database migration on production.", { quiet: true, notes: ["Quiet hours: sent without sound."] }),
+  message(6, 0, "high", "Waiting for approval", "I need your OK to run the database migration on production.", {
+    quiet: true, notes: ["Quiet hours: sent without sound."], expectReply: true,
+    interactions: [{
+      id: "i_1", messageId: "msg_6", agentId: null, channelId: "ch_telegram", channelKind: "telegram", channelName: "Telegram", kind: "reply",
+      matchedBy: "latest", text: "Go ahead, run it after 6 PM.", option: null, media: [], sender: "Ryan", createdAt: now - 2 * hour, readAt: null,
+    }],
+  }),
   message(7, 2, "low", "Lint warnings", "3 new lint warnings in web/.", { status: "throttled", deliveries: [], notes: ["Message cap reached for this agent."] }),
 ];
 if (!fresh) for (let i = 8; i < 26; i++) messages.push(message(i, i % 3, PRIORITIES[i % 4]!, `Task ${i} finished`, "Routine update from a long-running job."));
@@ -206,6 +218,21 @@ function route(method: string, path: string, body: Record<string, unknown>): unk
       });
       messages = [sent, ...messages];
       return sent;
+    }
+    if (itemId && method === "POST" && action === "ack") {
+      const found = find(messages, itemId);
+      const delivery = found.deliveries[0] ?? fail(400, "Beep Me did not deliver this message, so there is nothing to answer.");
+      found.interactions.push({
+        id: id("i"), messageId: found.id, agentId: found.agentId, channelId: delivery.channelId, channelKind: delivery.channelKind, channelName: delivery.channelName,
+        kind: "reaction", matchedBy: "dashboard", text: "👍", option: null, media: [], sender: "Dashboard", createdAt: Date.now(), readAt: null,
+      });
+      for (const step of found.fallbacks) if (step.status === "pending") Object.assign(step, { status: "canceled", detail: "You selected Got it in Beep Me." });
+      return found;
+    }
+    if (itemId && method === "POST" && action === "fallbacks" && parts[3] === "cancel") {
+      const found = find(messages, itemId);
+      for (const step of found.fallbacks) if (step.status === "pending") Object.assign(step, { status: "canceled", detail: "You canceled it in Beep Me." });
+      return found;
     }
     if (itemId) return find(messages, itemId);
     const q = url.searchParams;

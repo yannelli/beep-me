@@ -4,6 +4,7 @@ import { PageHeader, Skeleton } from "../components/ui";
 import { Link } from "../lib/router";
 import { copy } from "../copy";
 import { useQuery } from "../lib/query";
+import { FallbacksCard } from "./routing/FallbacksCard";
 import { LimitsCard, QuietHoursCard, TopicsCard } from "./routing/QuietLimitsTopics";
 import { RoutesCard } from "./routing/RoutesCard";
 import { RulesCard } from "./routing/RulesCard";
@@ -45,6 +46,7 @@ export function Routing() {
         ) : (
           <>
             <RoutesCard channels={list} />
+            <FallbacksCard channels={list} />
             <RulesCard channels={list} />
           </>
         )}

@@ -1,4 +1,4 @@
-import { ArrowRight, ExternalLink, Moon } from "lucide-react";
+import { ArrowRight, ExternalLink, Moon, RotateCcw } from "lucide-react";
 import type { ReactNode } from "react";
 import type { MessageDTO } from "../../../shared/api";
 import { CHANNEL_CATALOG } from "../../../shared/channel-catalog";
@@ -8,6 +8,7 @@ import { errorMessage } from "../../lib/api";
 import { dateTime, destinationName } from "../../lib/format";
 import { useQuery } from "../../lib/query";
 import { MessageExtras } from "./MessageExtras";
+import { FallbackList, MessageActions } from "./MessageFallbacks";
 import { DELIVERY_STATUS, MESSAGE_STATUS } from "./status";
 
 const sources: Record<MessageDTO["source"], string> = { mcp: "MCP", api: "API", test: "Test", system: "Beep Me" };
@@ -46,6 +47,7 @@ export function MessageSheet({ id, initial, onClose }: { id: string | null; init
             </a>
           )}
           <MessageExtras message={message} onAnswered={() => void fresh.refetch()} />
+          <MessageActions message={message} />
 
           <dl className="rounded-xl border border-line px-3">
             <Row label="Priority">
@@ -101,6 +103,12 @@ export function MessageSheet({ id, initial, onClose }: { id: string | null; init
                           </p>
                           <Badge tone={status.tone}>{status.label}</Badge>
                         </div>
+                        {delivery.reason && (
+                          <p className="mt-1 flex items-start gap-1.5 text-sm break-words text-muted">
+                            <RotateCcw className="mt-0.5 size-3.5 shrink-0" aria-label="Fallback" />
+                            {delivery.reason}
+                          </p>
+                        )}
                         {delivery.detail && <p className="mt-1 text-sm break-words text-muted">{delivery.detail}</p>}
                       </div>
                     </li>
@@ -109,6 +117,7 @@ export function MessageSheet({ id, initial, onClose }: { id: string | null; init
               </ul>
             )}
           </section>
+          <FallbackList message={message} />
         </div>
       )}
     </Sheet>

@@ -72,3 +72,9 @@ export function randomId(length = 10): string {
 export function plural(count: number, word: string): string {
   return `${count} ${word}${count === 1 ? "" : "s"}`;
 }
+
+/** "right away", "after 5 min", "after 2 h". */
+export function afterLabel(minutes: number): string {
+  if (minutes === 0) return "right away";
+  return minutes % 60 === 0 ? `after ${minutes / 60} h` : `after ${minutes} min`;
+}
