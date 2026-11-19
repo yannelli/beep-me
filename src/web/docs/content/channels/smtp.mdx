@@ -55,9 +55,9 @@ The subject has the priority, the title, and the agent name:
 [High] Deploy failed · Claude Code
 ```
 
-The email has an HTML part and a plain text part. The HTML part has a colored bar for the priority, a line with the priority, sender, and topic, then the title, body, and link. When the agent offers choices, the email lists them as numbered lines. On an `https://` deployment, it ends with a **View in Beep Me** link. Email has no silent mode, so quiet hours do not change it.
+The email has an HTML part and a plain text part. The HTML part has a colored bar for the priority, a line with the priority, sender, and topic, then the title, body, and link. When the agent offers choices, the email lists them by number. On an `https://` deployment, it ends with a **View in Beep Me** link. Email has no silent mode, so quiet hours do not change it.
 
-Replies to this email go to your own inbox. Beep Me does not read them, so the email does not ask you to reply. To answer agents by email, use [Resend](/docs/channels/resend) with an agent domain.
+Replies to this email go to your own inbox, and Beep Me does not read them. When the agent asks a question, the email has an **Answer in Beep Me** link to the message, where you can answer. To answer agents by email, use [Resend](/docs/channels/resend) with an agent domain.
 
 Files from the agent are attached, up to 18 MB in total. Many mail servers refuse email over 25 MB, and file encoding adds about a third. Files that do not fit, and files that Beep Me cannot load, are listed as links under **Files**.
 

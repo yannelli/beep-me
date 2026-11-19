@@ -11,7 +11,7 @@ export interface EmailContent {
 
 export interface EmailOptions {
   subjectPrefix?: string;
-  /** True when replies to this email reach Beep Me. Adds "Reply with the number" and "Reply to this email to answer". */
+  /** True when replies to this email reach Beep Me. Otherwise the email links to the dashboard answer form. */
   replies?: boolean;
   /** Files that did not fit in the email. The body links to them. */
   links?: OutboundAttachment[];
@@ -28,15 +28,16 @@ export function emailSubject(message: OutboundMessage, prefix?: string): string 
   return oneLine(subject);
 }
 
+/** Email that cannot carry replies points to the dashboard answer form. */
 function replyPrompt(message: OutboundMessage, options: EmailOptions): string | null {
-  if (!options.replies) return null;
-  if (message.options.length) return "Reply with the number.";
-  return message.expectReply ? "Reply to this email to answer." : null;
+  if (!message.options.length && !message.expectReply) return null;
+  if (!options.replies) return "Answer in Beep Me.";
+  return message.options.length ? "Reply with the number." : "Reply to this email to answer.";
 }
 
 function emailText(message: OutboundMessage, options: EmailOptions): string {
-  const list = message.options.map((option, index) => `${index + 1}. ${option}`).join("\n");
-  const answer = !options.replies ? list : message.options.length ? optionsText(message) : replyPrompt(message, options);
+  const choices = optionsText(message, Boolean(options.replies));
+  const answer = choices && !options.replies ? `${choices}\n${message.appUrl}` : choices;
   const files = options.links?.length ? `Files:\n${options.links.map((file) => `- ${file.name}: ${file.url}`).join("\n")}` : "";
   const footer = message.appUrl.startsWith("https://") ? `View in Beep Me: ${message.appUrl}` : "";
   return [plainText(message), answer, files, footer].filter(Boolean).join("\n\n");
@@ -62,7 +63,8 @@ function emailHtml(message: OutboundMessage, options: EmailOptions): string {
     ? `<ol style="margin:0 0 12px;padding-left:24px">${message.options.map((option) => `<li style="margin:0 0 4px">${escapeHtml(option)}</li>`).join("")}</ol>`
     : "";
   const prompt = replyPrompt(message, options);
-  const promptHtml = prompt ? `<p style="margin:0 0 12px;font-weight:600">${escapeHtml(prompt)}</p>` : "";
+  const promptText = prompt && !options.replies ? `<a href="${escapeHtml(message.appUrl)}" style="color:${color}">${escapeHtml(prompt)}</a>` : escapeHtml(prompt ?? "");
+  const promptHtml = prompt ? `<p style="margin:0 0 12px;font-weight:600">${promptText}</p>` : "";
   const files = options.links?.length
     ? `<p style="margin:16px 0 4px;font-size:13px;color:#4b5563">Files</p><ul style="margin:0;padding-left:24px">${options.links
         .map((file) => `<li><a href="${escapeHtml(file.url)}" style="color:${color}">${escapeHtml(file.name)}</a></li>`)
