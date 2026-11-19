@@ -44,7 +44,7 @@ function describe(reply: InteractionDTO, message: AnsweredMessage | undefined): 
   const what = reply.option ? `chose "${reply.option.label}"` : reply.kind === "reaction" ? `reacted ${reply.text ?? ""}` : `replied: ${reply.text ?? "(no text)"}`;
   const files = reply.media.length ? ` (${reply.media.length} file${reply.media.length > 1 ? "s" : ""})` : "";
   const where = reply.matchedBy === "dashboard" ? "in the Beep Me dashboard" : `on ${CHANNEL_CATALOG[reply.channelKind].name}${reply.channelName ? ` "${reply.channelName}"` : ""}`;
-  const how = reply.matchedBy ? ` It ${HOW[reply.matchedBy]}.` : "";
+  const how = reply.matchedBy && reply.matchedBy !== "dashboard" ? ` It ${HOW[reply.matchedBy]}.` : "";
   const about = message
     ? ` In reply to ${message.message_id}${message.title ? ` "${message.title}"` : ""}${message.topic ? `, topic ${message.topic}` : ""}, sent to ${message.sent_to.join(", ") || "no channel"}.`
     : " Not tied to any message you sent.";

@@ -41,7 +41,7 @@ export const SKILLS: SkillDef[] = [
 
 function skillText(skill: SkillDef): string {
   const body = skill.guides.map((topic) => GUIDES[topic].trim()).join("\n\n");
-  return `---\nname: ${skill.name}\ndescription: ${skill.description}\n---\n\n${body}\n`;
+  return `---\nname: ${skill.name}\ndescription: ${JSON.stringify(skill.description)}\n---\n\n${body}\n`;
 }
 
 let catalog: Promise<SkillCatalog> | null = null;
