@@ -28,6 +28,7 @@ export const DOC_SECTIONS: DocSection[] = [
       { slug: "agents/other-clients", title: "Other MCP clients", description: "Connect any MCP client that supports remote servers." },
       { slug: "agents/scripts", title: "Scripts and CI", description: "Send messages from curl, cron jobs, and CI pipelines with an agent token." },
       { slug: "agents/replies", title: "Replies and questions", description: "Let agents ask you something, send files, and read your answers." },
+      { slug: "agents/waiting", title: "Wait for answers", description: "Let an agent wait for your answer at no token cost." },
       { slug: "agents/access", title: "Agent access", description: "Set each agent's channels and highest priority, and mute or revoke it." },
     ],
   },
@@ -54,6 +55,7 @@ export const DOC_SECTIONS: DocSection[] = [
       { slug: "routing/priorities", title: "Priorities", description: "The four priority levels, and when an agent should use each one." },
       { slug: "routing/routes-and-rules", title: "Routes and rules", description: "Choose where each priority goes, and add rules for topics and agents." },
       { slug: "routing/quiet-hours", title: "Quiet hours", description: "Keep your phone silent at night and let urgent messages through." },
+      { slug: "routing/fallbacks", title: "Fallbacks", description: "Send a message again to other channels when nobody answers or a send fails." },
       { slug: "routing/limits", title: "Limits and repeats", description: "Text caps, message caps, collapsed repeats, and pausing everything." },
       { slug: "routing/topics", title: "Topics", description: "Group messages by project, with a thread for each topic." },
       { slug: "routing/delivery-log", title: "Delivery log", description: "Read what each agent sent, where it went, and whether it arrived." },
@@ -62,7 +64,7 @@ export const DOC_SECTIONS: DocSection[] = [
   {
     title: "Reference",
     pages: [
-      { slug: "reference/mcp", title: "MCP server", description: "The tools, prompt, instructions, and sign-in that Beep Me gives MCP clients." },
+      { slug: "reference/mcp", title: "MCP server", description: "The tools, skills, prompts, instructions, and sign-in that Beep Me gives MCP clients." },
       { slug: "reference/rest-api", title: "REST API", description: "Send a notification with one HTTP request." },
       { slug: "reference/cli", title: "CLI", description: "Deploy, move to your own domain, and manage Beep Me from the terminal." },
       { slug: "reference/configuration", title: "Configuration", description: "Secrets, variables, custom domains, and data retention." },

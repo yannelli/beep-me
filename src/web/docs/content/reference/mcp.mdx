@@ -1,4 +1,4 @@
-This page lists what the Beep Me MCP server gives a client: the endpoint, sign-in, tools, prompt, and server instructions. Use it when you build a client or check what an agent sees.
+This page lists what the Beep Me MCP server gives a client: the endpoint, sign-in, tools, skills, prompts, and server instructions. Use it when you build a client or check what an agent sees.
 
 ## Endpoint
 
@@ -92,6 +92,24 @@ Sends a notification through the user's routes. Title: **Send notification**.
 | `options` | string array | No | 2 to 10, each up to 64 characters | Choices for a question. Setting them also sets `expect_reply`. |
 | `expect_reply` | boolean | No | | `true` when the agent wants a written answer. |
 | `sender_name` | string | No | Up to 80 characters | A display name for this message, for example "Cat Design Project". It shows next to the agent name. |
+| `channels` | string array | No | 1 to 5 | Channel IDs, names (any case), or kinds such as `telegram` (each channel of that kind). Replaces your route for this message. |
+| `topic_thread` | boolean | No | | With `topic`, send into the topic thread on channels that have threads. Other channels get the main chat. |
+| `fallbacks` | array | No | Up to 5 steps | Fallback steps for this message: `when`, `after_minutes`, `channels`, and optional `priority`. They replace your steps. `[]` turns them off. |
+
+With `channels`, pause, mutes, mute rules, the agent's channels, quiet hours, and the text cap still apply. When none of the chosen channels can take the message, Beep Me uses your route and adds a note. See [Routes and rules](/docs/routing/routes-and-rules#agent-chosen-channels). For `fallbacks`, see [Fallbacks](/docs/routing/fallbacks#fallbacks-from-agents).
+
+```json title="Example"
+{
+  "title": "Merge PR #42?",
+  "message": "Tests pass. The change touches billing.",
+  "priority": "high",
+  "topic": "api",
+  "options": ["Merge", "Wait"],
+  "channels": ["telegram"],
+  "topic_thread": true,
+  "fallbacks": [{ "when": "no_reply", "after_minutes": 10, "channels": ["twilio"] }]
+}
+```
 
 Uploaded files (`data`) live at an unguessable `/media/...` URL for 7 days, so providers such as Telnyx can fetch them. See [Replies and questions](/docs/agents/replies).
 
@@ -106,7 +124,9 @@ The output has the same fields as the REST response:
 | `topic` | string or null | The topic name. |
 | `quiet` | boolean | `true` when quiet hours applied. |
 | `repeat_count` | number | The count of identical messages, including this one. |
-| `deliveries` | array | `channel`, `kind`, `target`, `ok`, and `detail` for each channel. |
+| `deliveries` | array | `channel`, `channel_id`, `kind`, `target`, `ok`, and `detail` for each channel. |
+| `fallbacks` | array | Steps that wait for their time: `id`, `when`, `after_minutes`, `due_at`, and `channels`. |
+| `watch_url` | string or null | For a message that asks something, a URL to wait for an answer. See [Wait for answers](/docs/agents/waiting). |
 | `notes` | string array | Plain sentences about each routing decision. |
 
 For the meaning of each status, see [Status values](/docs/reference/rest-api#status-values).
@@ -133,6 +153,10 @@ Looks up a notification that this agent sent. Title: **Check notification status
 | --- | --- | --- | --- | --- |
 | `id` | string | Yes | 1 to 64 characters | The `id` that `notify` returned. |
 
+```json title="Example"
+{ "id": "msg_123" }
+```
+
 | Output | Type | Description |
 | --- | --- | --- |
 | `id` | string | The message ID. |
@@ -140,7 +164,10 @@ Looks up a notification that this agent sent. Title: **Check notification status
 | `priority` | string | The priority Beep Me used. |
 | `created_at` | string | ISO 8601 time. |
 | `repeat_count` | number | The count of identical messages. |
-| `deliveries` | array | `channel`, `target`, `status`, and `detail` for each channel. |
+| `deliveries` | array | `channel`, `channel_id`, `target`, `status`, `detail`, and `reason` for each channel. `reason` is set on fallback sends. |
+| `answers` | number | The count of answers to the message. |
+| `fallbacks` | array | Each step: `id`, `when`, `status`, `due_at`, `channels`, and `detail`. |
+| `watch_url` | string or null | The URL to wait for an answer. |
 | `notes` | string array | The routing notes. |
 
 Each delivery `status` is `pending`, `sent`, `delivered`, or `failed`. A text message changes to `delivered` or `failed` when the provider sends a delivery receipt. Receipts need an `https` deployment.
@@ -164,14 +191,66 @@ Returns what the user sent back to this agent's notifications: text replies, cho
 | `include_read` | boolean | `false` | Also return answers the agent already read. |
 | `limit` | number | `20` | 1 to 50. |
 
+```json title="Example"
+{ "message_id": "msg_123", "wait_seconds": 50 }
+```
+
 | Output | Type | Description |
 | --- | --- | --- |
-| `replies` | array | Each has `id`, `message_id`, `kind` (`reply`, `choice`, `reaction`, `vote`), `text`, `option` (`index` and `label`), `media`, `channel`, `sender`, and `created_at`. |
+| `replies` | array | Each has `id`, `message_id`, `kind` (`reply`, `choice`, `reaction`, `vote`), `text`, `option` (`index` and `label`), `media`, `channel`, `sender`, `created_at`, `from`, and `in_reply_to`. |
 | `waited_seconds` | number | How long Beep Me waited. |
+
+`from` has `channel_id`, `channel_name`, `channel_kind`, and `matched_by` for the channel the answer came from. `in_reply_to` has the `message_id`, `title`, `topic`, `sent_at`, and `sent_to` of the message it answers, or `null`. For each `matched_by` value, see [How answers are matched](/docs/agents/replies#how-answers-are-matched).
 
 Each file in `media` has a `url` at `/v1/media/<id>/<index>` that takes the agent's token. Up to three images under 1.5 MB also come back as image content, so the agent sees them right away.
 
-## Prompt
+### list_channels
+
+Lists the channels this agent can send to. Use the IDs, names, or kinds in `notify.channels` and in fallback steps. Title: **List channels**.
+
+```json title="Example"
+{}
+```
+
+Each channel has:
+
+| Output | Description |
+| --- | --- |
+| `id`, `name`, `kind` | The channel. |
+| `topic_threads` | `true` when the channel can put each topic in its own thread. |
+| `text_message` | `true` for text message channels. Quiet hours and the text cap apply to them. |
+| `answers` | How you can answer on this channel. |
+| `routes` | The priorities that go to this channel now. |
+
+### cancel_fallbacks
+
+Cancels the waiting fallback steps of a message that this agent sent. Title: **Cancel fallbacks**.
+
+```json title="Example"
+{ "message_id": "msg_123" }
+```
+
+### help
+
+Returns a guide in Markdown, with examples. Title: **Beep Me help**.
+
+| Input | Type | Default | Description |
+| --- | --- | --- | --- |
+| `topic` | string | `overview` | `overview`, `notify`, `channels`, `topics`, `replies`, `waiting`, `fallbacks`, or `examples`. |
+
+```json title="Example"
+{ "topic": "waiting" }
+```
+
+## Skills and prompts
+
+Beep Me serves three skills through the MCP skills extension (SEP-2640), at `skill://beep-me/<name>/SKILL.md`. It also serves each skill as a prompt with the same name. The skills use the same text as the `help` guides.
+
+| Skill | Guides | Use |
+| --- | --- | --- |
+| `beep-me-notify` | overview, notify, channels, topics | When to send, priorities, topics and threads, picking channels, and files. |
+| `beep-me-ask-and-wait` | replies, waiting, examples | Ask a question and wait for the answer at no token cost. |
+| `beep-me-fallbacks` | fallbacks | Reach you when you do not answer or a send fails. |
 
 ### notify-when-done
 
@@ -190,13 +269,16 @@ With a topic, `Use the project name as the topic.` changes to `Use the topic "<t
 The server sends these instructions to each client when it connects:
 
 ```text
-Beep Me sends your notifications to the user's phone, chat apps, and email.
-Call notify when a long task finishes or fails, when you are blocked and need a decision, when something urgent happens, or when the user asked you to report back.
-Skip routine progress steps. Send one message per event.
-Priorities: urgent needs action now and can break through quiet hours. high is important and time sensitive and usually arrives as a text message. medium is worth seeing today and is the default. low is background information and goes to the topic's thread.
-Set topic to a short project or subject name, such as the repository name. Each topic gets its own thread.
-Lead the title with the outcome. Keep message to a few sentences. Add url when there is a page to open.
-Beep Me applies the user's routing, quiet hours, and limits. The statuses collapsed, muted, paused, and throttled are normal results. Do not retry them.
+Beep Me sends your notifications to the user's phone, chat apps, and email, and brings their answers back to you.
+Call notify when a long task finishes or fails, when you are blocked and need a decision, when something urgent happens, or when the user asked you to report back. Skip routine progress. Send one message per event.
+Priorities: urgent needs action now and can break through quiet hours. high is important and time sensitive and usually arrives as a text message. medium is worth seeing today and is the default. low is background information.
+Set topic to a short project name, such as the repository name. Lead the title with the outcome. Keep message to a few sentences. Add url when there is a page to open.
+The user's routes pick the channels. To pick them yourself, call list_channels and pass ids or names in notify.channels. topic_thread true sends into the topic's thread.
+To ask something, send notify with options or expect_reply true, then read answers with get_replies. Each answer says which message it answers (in_reply_to) and where it came from (from.channel_name, from.matched_by). matched_by latest is a guess.
+To wait for an answer without spending tokens, run the watch loop from the notify result in a background shell, then call get_replies once. Without a shell, call get_replies with wait_seconds up to 50 a few times, or end your turn.
+fallbacks on notify send the message again elsewhere when nobody answers or a send fails. cancel_fallbacks stops them.
+The statuses collapsed, muted, paused, and throttled are normal results. Do not retry them.
+Call help for guides with examples. Topics: overview, notify, channels, topics, replies, waiting, fallbacks, examples.
 ```
 
 ## Next steps

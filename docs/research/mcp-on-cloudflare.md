@@ -1,6 +1,6 @@
 # MCP on Cloudflare Workers (November 2026)
 
-Created: 2026-11-18. Last updated: 2026-11-18.
+Created: 2026-11-18. Last updated: 2026-11-19.
 
 What Beep Me relies on, checked against the installed packages and a local spike (`vite dev`, workerd 1.20261117).
 
@@ -21,6 +21,19 @@ What Beep Me relies on, checked against the installed packages and a local spike
 - The SDK handler does no Origin or Host checks. Beep Me calls `originValidationResponse()` before it.
 - The `workerd` export condition selects a JSON Schema validator that does not use `new Function`. Zod input validation worked inside workerd in the spike.
 - Spike results: legacy `initialize` + `tools/call` (2025-06-18), the v2 client (negotiated 2025-11-25), and a raw 2026-07-28 envelope call all returned results. A bad Origin got 403.
+
+## Skills extension (SEP-2640), checked 2026-11-19
+
+- `@modelcontextprotocol/server` 2.4.0 ships it at `@modelcontextprotocol/server/ext/skills` (marked experimental). `SkillsExtension.load(memorySkillFiles({ "<name>/SKILL.md": text }), { prefix })` builds a catalog. `catalog.attach(server)` registers `skills/list`, `skills/get`, the skill resource template, and the capability `extensions["io.modelcontextprotocol/skills"]`. Attach before the server connects.
+- `createMcpHandler` accepts an async factory, so Beep Me loads the catalog once per isolate and attaches it to each per-request server.
+- URIs are `skill://<prefix>/<name>/SKILL.md`. Beep Me uses prefix `beep-me`.
+- The frontmatter parser rejects a plain value that contains `: `. The SDK logs a warning and skips that skill, so `skills/list` returns fewer skills with no error. Quote the value (Beep Me writes it with `JSON.stringify`).
+- Verified with `wrangler dev` on the built Worker: `skills/list` returns the three skills and `resources/read` returns the SKILL.md text.
+
+## Local cron runs, checked 2026-11-19
+
+- `wrangler dev --test-scheduled` serves `/__scheduled`, but a request with `Sec-Fetch-Mode: navigate` (Node `fetch` sends it) goes to the assets `not_found_handling` page and the handler does not run. `curl` works, or use `POST /cdn-cgi/local/explorer/api/local/scheduled?worker=beep-me` with `{"cron":"* * * * *"}`.
+- The cron is `* * * * *` since v0.7.0. Fallback steps need a one-minute check. `index.ts` prunes old messages only when the scheduled minute is a multiple of 15.
 
 ## OAuth provider 1.2
 

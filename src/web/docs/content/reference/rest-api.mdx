@@ -80,10 +80,24 @@ Beep Me trims spaces from the start and end of each text field before it checks 
 | `options` | string array | No | 2 to 10 choices, each up to 64 characters. JSON only. | None |
 | `expect_reply` | boolean | No | JSON only. | `false`, or `true` when `options` is set |
 | `sender_name` | string | No | Up to 80 characters. JSON only. | The agent name |
+| `channels` | string array | No | 1 to 5 channel IDs, names, or kinds. JSON only. | Your route |
+| `topic_thread` | boolean | No | JSON only. | `false` |
+| `fallbacks` | array | No | Up to 5 steps: `when`, `after_minutes`, `channels`, and optional `priority`. JSON only. | Your steps for the priority |
 
 Beep Me lowers `priority` to the agent's highest priority. The response shows both values. See [Priorities](/docs/routing/priorities).
 
 Beep Me joins repeated spaces in `topic` and removes a leading `#`. Topics match without regard to case, so `API` and `api` are one topic. See [Topics](/docs/routing/topics).
+
+`channels` replaces your route for this message. A kind such as `telegram` picks each channel of that kind. With `topic` and `topic_thread: true`, channels with threads send into the topic thread. See [Agent-chosen channels](/docs/routing/routes-and-rules#agent-chosen-channels).
+
+`fallbacks` replaces your fallback steps for this message, and `[]` turns them off. See [Fallbacks](/docs/routing/fallbacks#fallbacks-from-agents).
+
+```sh
+curl -X POST https://your-beep-me.example/v1/notify \
+  -H "Authorization: Bearer $BEEPME_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"message":"Deploy to prod?","options":["Yes","No"],"channels":["telegram"],"fallbacks":[{"when":"no_reply","after_minutes":10,"channels":["twilio"]}]}'
+```
 
 Two messages from the same agent with the same `dedupe_key` collapse into one inside the collapse window. Without a key, Beep Me compares the topic, the title, and the message.
 
@@ -101,8 +115,10 @@ Every request that passes authentication and validation returns HTTP 200 with a 
   "quiet": false,
   "repeat_count": 1,
   "deliveries": [
-    { "channel": "Telegram", "kind": "telegram", "target": "topic", "ok": true, "detail": null }
+    { "channel": "Telegram", "channel_id": "ch_7Hk2", "kind": "telegram", "target": "topic", "ok": true, "detail": null }
   ],
+  "fallbacks": [],
+  "watch_url": null,
   "notes": []
 }
 ```
@@ -118,10 +134,13 @@ Every request that passes authentication and validation returns HTTP 200 with a 
 | `repeat_count` | number | `1` for a new message. For a `collapsed` result, the total count. |
 | `deliveries` | array | One item for each channel Beep Me tried. Empty when Beep Me held the message. |
 | `deliveries[].channel` | string | The channel name from the dashboard. |
+| `deliveries[].channel_id` | string | The channel ID. |
 | `deliveries[].kind` | string | The channel type, for example `telegram` or `twilio`. |
 | `deliveries[].target` | string | `main`, or `topic` for a topic thread. |
 | `deliveries[].ok` | boolean | `true` when the provider accepted the message. |
 | `deliveries[].detail` | string or null | The provider result or error text. |
+| `fallbacks` | array | Fallback steps that wait for their time: `id`, `when`, `after_minutes`, `due_at`, and `channels`. |
+| `watch_url` | string or null | For a message with `options` or `expect_reply`, a URL to wait for an answer. See [Watch](#watch). |
 | `notes` | string array | Plain sentences that explain each routing decision. |
 
 ### Status values
@@ -181,6 +200,8 @@ curl "https://your-beep-me.example/v1/replies?message_id=msg_123&wait_seconds=30
       "option": { "index": 0, "label": "Ship it" },
       "media": [],
       "channelKind": "telegram",
+      "channelName": "Telegram",
+      "matchedBy": "button",
       "sender": "Ryan",
       "createdAt": 1795051863752
     }
@@ -189,7 +210,23 @@ curl "https://your-beep-me.example/v1/replies?message_id=msg_123&wait_seconds=30
 }
 ```
 
+`channelName` is the name of the channel the answer came from, or `null` when you deleted the channel. `matchedBy` is how Beep Me tied the answer to the message: `reply`, `button`, `reaction`, `latest`, `address`, `dashboard`, or `null`. See [How answers are matched](/docs/agents/replies#how-answers-are-matched).
+
 Files the user sent come from `GET /v1/media/<interaction id>/<index>` with the same token. Only the agent that sent the original message can read them.
+
+## Watch
+
+`GET <watch_url>` reports whether a message has an answer. The URL is signed, so it needs no token. Add `wait_seconds` (up to 50) to wait for an answer:
+
+```sh
+curl "https://your-beep-me.example/v1/watch/msg_123/<signature>?wait_seconds=50"
+```
+
+```json
+{ "message_id": "msg_123", "ready": true, "count": 1, "waited_seconds": 12 }
+```
+
+The response has no answer text. When `ready` is `true`, read the answer from `/v1/replies`. For a loop that waits up to 90 minutes, see [Wait for answers](/docs/agents/waiting).
 
 ## Next steps
 

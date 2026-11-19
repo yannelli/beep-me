@@ -147,9 +147,16 @@ curl "https://<your-worker>/v1/replies?message_id=<id>&wait_seconds=30" \
 
 | Tool | What it does |
 | --- | --- |
-| `notify` | Sends a message. Inputs: `message`, `title`, `priority` (`low`, `medium`, `high`, `urgent`), `topic`, `url`, `dedupe_key`, `attachments` (up to 10 files), `options` (2 to 10 choices), `expect_reply`, `sender_name`. Returns the message ID, the channels that got the message, and the routing notes. |
-| `notification_status` | Shows the status of a message from this agent, with the SMS delivery receipts. |
-| `get_replies` | Returns what you sent back: text replies, choices, reactions, and files. Inputs: `message_id`, `since`, `wait_seconds` (up to 50), `include_read`, `limit`. Marks the answers read. |
+| `notify` | Sends a message. Inputs: `message`, `title`, `priority` (`low`, `medium`, `high`, `urgent`), `topic`, `topic_thread`, `channels` (the agent picks channels), `fallbacks`, `url`, `dedupe_key`, `attachments` (up to 10 files), `options` (2 to 10 choices), `expect_reply`, `sender_name`. Returns the message ID, the channels that got the message, the waiting fallback steps, a watch URL for questions, and the routing notes. |
+| `notification_status` | Shows where a message from this agent went, its SMS delivery receipts, its answer count, and its fallback steps. |
+| `get_replies` | Returns what you sent back: text replies, choices, reactions, and files. Each answer has `from` (the channel and how Beep Me matched it) and `in_reply_to` (the message and every channel it went to). Inputs: `message_id`, `since`, `wait_seconds` (up to 50), `include_read`, `limit`. Marks the answers read. |
+| `list_channels` | Lists the channels the agent can use, with ids, kinds, topic threads, and how you can answer on each. |
+| `cancel_fallbacks` | Stops the waiting fallback steps of a message. |
+| `help` | Guides with examples: overview, notify, channels, topics, replies, waiting, fallbacks, examples. |
+
+Beep Me also serves three skills (`beep-me-notify`, `beep-me-ask-and-wait`, `beep-me-fallbacks`) through the MCP skills extension and as prompts. `beep-me-ask-and-wait` shows agents how to wait for your answer with a shell loop on the watch URL, so the wait costs no tokens.
+
+Fallbacks send a message again to other channels when nobody answers, a send fails, or a text is not confirmed. Set them for each priority under **Routing**, or let the agent set them on one message. Beep Me checks them every minute.
 
 The prompt `notify-when-done` tells the agent to send a message when the current task finishes or gets stuck. The server instructions tell agents when to notify and how to pick a priority.
 

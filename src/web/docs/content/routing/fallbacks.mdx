@@ -1,0 +1,116 @@
+Fallbacks send a message again to other channels when nobody answers or a send fails. Use this page to set fallback steps for each priority and to read what they did.
+
+## How a step works
+
+Each priority can have up to 5 steps. A step has a trigger, a delay, destinations, and a priority:
+
+| Field | What it sets |
+| --- | --- |
+| **When** | The trigger: **No answer**, **Send failed**, or **Not confirmed**. |
+| **Minutes after the first send** | 0 to 1440. Beep Me counts from the first send of the message. |
+| **Send to** | 1 to 5 destinations. A destination is a channel plus a target: the main chat or the topic thread. |
+| **Priority** | **Keep priority**, or Low, Medium, High, or Urgent. |
+
+Beep Me checks for due steps every minute. Each step runs one time at most. A step runs only if its trigger is still true at that time.
+
+## Triggers
+
+| Trigger | The step runs when |
+| --- | --- |
+| **No answer** (`no_reply`) | Nobody answered, tapped a button, or reacted, on any channel or in the dashboard. |
+| **Send failed** (`failed`) | Every send of the message failed, including earlier fallback sends. |
+| **Not confirmed** (`unconfirmed`) | No send is confirmed. |
+
+**No answer** applies to every message of that priority, including messages that ask nothing. For those messages, a reaction, any reply, or **Got it** in the dashboard stops the step.
+
+A **Send failed** step with 0 minutes runs right after the first send.
+
+For **Not confirmed**, a text message counts as confirmed only after the carrier sends a delivery receipt. Other channels count as confirmed when the provider accepts the message. Delivery receipts need an `https` deployment.
+
+## Add a step
+
+<Steps>
+
+### Open fallbacks
+
+Open [Routing](/routing). Find the **Fallbacks** card.
+
+### Add the step
+
+Select **Add step** next to a priority.
+
+### Set the trigger and delay
+
+Select **No answer**, **Send failed**, or **Not confirmed**. Enter the minutes after the first send.
+
+### Select destinations
+
+Under **Send to**, select 1 to 5 destinations.
+
+### Set the priority
+
+Leave **Keep priority** selected, or select a priority for the fallback send. Then select **Add step**.
+
+</Steps>
+
+The card shows each step as one sentence, for example "No answer after 5 min: Phone (SMS), at Urgent". To change or delete a step, select it. Then select **Save step** or **Delete step**.
+
+## What a fallback send does
+
+A fallback sends the same message again. It keeps the same message ID. Its delivery in the log shows the reason, for example "No answer after 5 minutes."
+
+Answers on the fallback channel attach to the same message. The agent reads them with `get_replies`, the same as other answers. See [Replies and questions](/docs/agents/replies).
+
+When the step runs, Beep Me skips it if:
+
+- Beep Me is paused.
+- The agent is muted or revoked.
+
+Quiet hours use the priority of the step, so a step at **Urgent** makes sound during quiet hours. See [Quiet hours](/docs/routing/quiet-hours). The text cap applies to fallback sends too. See [Limits and repeats](/docs/routing/limits).
+
+## Fallbacks from agents
+
+An agent can set `fallbacks` on `notify` for one message. These steps replace your steps for that message. `fallbacks: []` turns off fallbacks for that message.
+
+```json title="notify input"
+{
+  "title": "Merge PR #42?",
+  "message": "Tests pass. The change touches billing.",
+  "options": ["Merge", "Wait"],
+  "channels": ["telegram"],
+  "fallbacks": [{ "when": "no_reply", "after_minutes": 10, "channels": ["twilio"], "priority": "urgent" }]
+}
+```
+
+An agent step uses `when`, `after_minutes`, `channels` (channel IDs, names, or kinds), and an optional `priority`. The agent's highest priority still applies. The agent stops its pending steps with the `cancel_fallbacks` tool. See [MCP server](/docs/reference/mcp#cancel_fallbacks).
+
+## Read fallbacks in Activity
+
+Open a message in [Activity](/). The **Fallbacks** section lists each step of the message:
+
+| Status | Meaning |
+| --- | --- |
+| **Waiting** | The step waits for its time. The row shows when it is due. |
+| **Sending** | Beep Me sends the step now. |
+| **Sent** | Beep Me sent the step. |
+| **Skipped** | Beep Me did not send the step. The row shows why. |
+| **Canceled** | An answer arrived, you or the agent canceled the step, or its trigger was not true anymore when the step came due. |
+
+Two buttons show on the message:
+
+- **Got it** records a 👍 reaction from the dashboard and cancels each waiting step of the message. The agent sees the reaction with `get_replies`. The button shows until the message has an answer.
+- **Cancel fallbacks** cancels each waiting step of the message.
+
+## Next steps
+
+<Cards>
+
+<Card href="/docs/agents/waiting" title="Wait for answers">
+Let an agent wait for your answer at no token cost.
+</Card>
+
+<Card href="/docs/routing/routes-and-rules" title="Routes and rules">
+Choose where each priority goes.
+</Card>
+
+</Cards>

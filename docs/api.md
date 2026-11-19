@@ -27,6 +27,9 @@ The dashboard talks to the Worker over same-origin JSON under `/api`. The sessio
 | GET | `/api/messages?before&agent&status&priority&topic&limit` | | `MessagePage` |
 | GET | `/api/messages/:id` | | `MessageDTO` |
 | POST | `/api/messages/test` | `SendTestBody` | `MessageDTO` (full pipeline, sender "Beep Me") |
+| POST | `/api/messages/:id/answer` | `{ option?: number, text?: string }` | `MessageDTO`. Records a dashboard answer (`matchedBy: "dashboard"`). |
+| POST | `/api/messages/:id/ack` | | `MessageDTO`. Records a 👍 from the dashboard and cancels the waiting fallback steps. |
+| POST | `/api/messages/:id/fallbacks/cancel` | | `MessageDTO`. Cancels the waiting fallback steps. |
 | GET | `/api/topics` | | `{ items: TopicDTO[] }` |
 | GET | `/api/media/:interaction/:index` | | A file the user sent back, streamed through the channel |
 | POST | `/api/integrations/telnyx/account` | `{ apiKey } \| { channelId }` | `TelnyxAccountDTO` (numbers and messaging profiles) |
@@ -55,6 +58,9 @@ Every Resend setup POST without `confirm: true` changes nothing and returns 409 
 | POST | `/v1/notify` | `Authorization: Bearer beep_…` | Send a notification from curl, CI, or cron |
 | GET | `/v1/replies` | `Authorization: Bearer beep_…` | Read answers to this agent's messages, with optional waiting |
 | GET | `/v1/media/:interaction/:index` | `Authorization: Bearer beep_…` | A file the user sent back to this agent |
+| GET | `/v1/watch/:message/:signature?wait_seconds` | The signed URL from `notify.watch_url` | `{ message_id, ready, count, waited_seconds }`. Waits up to 50 seconds for an unread answer. Returns no answer text. 401 when the agent was revoked. |
+
+`/v1/notify` and the MCP `notify` tool take the same body, including `channels`, `topic_thread`, and `fallbacks`. Fallback steps live in the `fallbacks` table (migration `0003`) and show on `MessageDTO.fallbacks`.
 
 ## Public and webhook endpoints
 

@@ -35,6 +35,8 @@ Beep Me uses a thread only when the destination is the topic target: **Topic thr
 
 To send Medium messages to threads, edit the Medium route. Select Telegram **Topic threads** as a destination. See [Routes and rules](/docs/routing/routes-and-rules).
 
+An agent can also pick the thread for one message. With `topic` and `topic_thread: true` on `notify`, Beep Me sends into the topic thread on each channel that has threads. Channels without threads get the main chat. See [Agent-chosen channels](/docs/routing/routes-and-rules#agent-chosen-channels).
+
 ## Mute a topic
 
 <Steps>

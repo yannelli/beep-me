@@ -32,6 +32,8 @@ No channel for High was usable. Beep Me sent it to Telegram instead.
 
 When no channel can take the message, its status is **Failed**. An empty route also uses these fallbacks.
 
+To send a message again later when nobody answers or a send fails, use [fallback steps](/docs/routing/fallbacks).
+
 ## Edit routes
 
 Open [Routing](/routing). The **Priority routes** card shows the **Automatic** badge while Beep Me sets the routes.
@@ -98,6 +100,20 @@ The rule "CI noise" muted this message.
 
 To change the order, use the up and down arrows next to each rule.
 
+## Agent-chosen channels
+
+An agent can pick the channels for one message with `channels` on `notify`. Each item is a channel ID, a channel name in any case, or a kind such as `telegram`. A kind picks each channel of that kind. The agent sees its channels with the `list_channels` tool.
+
+The choice replaces the rule and the route for that message. These checks still apply: pause, agent and topic mutes, mute rules, the agent's channels, quiet hours, and the text cap.
+
+When none of the chosen channels can take the message, Beep Me uses your route and adds a note to the log. When a name matches no channel, the note names it.
+
+With `topic` and `topic_thread: true`, Beep Me sends into the topic thread on channels that have threads. Other channels get the main chat. See [Topics](/docs/routing/topics#threads).
+
+```json title="notify input"
+{ "message": "Build 812 is green.", "topic": "api", "channels": ["telegram", "ntfy push"], "topic_thread": true }
+```
+
 ## Worked example
 
 This setup has three channels: Twilio SMS, Telegram with topic threads, and Slack. The routes are automatic, so Urgent and High go to Twilio SMS. Medium goes to the Telegram main chat. Low goes to Telegram topic threads.
@@ -134,12 +150,13 @@ Beep Me handles every message in this order. A step that ends the message stops 
 8. If the agent is over its message cap, record the message as **Over limit** and stop.
 9. Find the first rule that matches. If its action is **Mute**, record the message as **Muted** and stop.
 10. Check quiet hours. The message is quiet when quiet hours are on now and the priority is below the break-through level.
-11. Take the destinations from the rule. With no rule, take them from the priority route.
+11. Take the destinations from the agent's `channels`. Without them, take them from the rule. With no rule, take them from the priority route.
 12. Remove each channel that is off, not ready, or outside the agent's channels. When the message is quiet, remove text channels too.
 13. If nothing is left, use the fallbacks. If the message is quiet, Beep Me removed a text channel, and no fallback exists, record it as **Muted** and stop.
 14. Check the text cap for each text channel. When the agent is over the cap, Beep Me sends to the fallbacks once.
 15. Send to every destination at the same time.
 16. Set the status: **Delivered** when every send worked, **Partly delivered** when some worked, and **Failed** when none worked.
+17. Store the [fallback steps](/docs/routing/fallbacks) for the message. Steps that are due now run at once.
 
 Steps 7 and 8 come from [Limits and repeats](/docs/routing/limits). Steps 10 to 13 come from [Quiet hours](/docs/routing/quiet-hours).
 

@@ -14,7 +14,7 @@ Send `notify` with `options` for a multiple choice question, or `expect_reply: t
 }
 ```
 
-Then read the answer. `wait_seconds` holds the call open until something arrives, up to 50 seconds. Call again if it comes back empty.
+Then read the answer. `wait_seconds` holds the call open until something arrives, up to 50 seconds. Call again if it comes back empty. For long waits, see [Wait for answers](/docs/agents/waiting).
 
 ```json title="get_replies input"
 { "message_id": "msg_123", "wait_seconds": 50 }
@@ -31,6 +31,30 @@ Each answer has a `kind`:
 
 Beep Me marks answers read when the agent gets them, so each answer reaches the agent once. Pass `include_read: true` to see them again.
 
+## How answers are matched
+
+Each answer from `get_replies` has `from` and `in_reply_to`:
+
+| Field | What it holds |
+| --- | --- |
+| `from` | `channel_id`, `channel_name`, and `channel_kind` of the channel the answer came from, and `matched_by`. |
+| `in_reply_to` | The message it answers: `message_id`, `title`, `topic`, `sent_at`, and `sent_to` (each channel that got the message, including fallback sends). `null` when Beep Me could not tie the answer to a message. |
+
+`matched_by` tells how Beep Me tied the answer to the message:
+
+| Value | How Beep Me matched it |
+| --- | --- |
+| `reply` | You replied to that exact message, for example a Telegram reply or an email reply in the same thread. |
+| `button` | You tapped one of the options. |
+| `reaction` | You reacted to that message. |
+| `latest` | You wrote in a chat or texted back without a reply. Beep Me picked the newest message on that chat that waited for an answer. This is a guess. |
+| `address` | You sent an email to the agent's own address. It is not tied to one message. |
+| `dashboard` | You answered in Beep Me, or selected **Got it**. |
+
+A message can go to more than one channel, and a fallback can send it again. An answer on any of those channels attaches to the same message. When `matched_by` is `latest` and the agent has more than one open question, it checks the answer against `in_reply_to.title`.
+
+In Activity, each answer shows the channel name. An answer matched with `latest` also shows "Beep Me matched this to the newest message on that chat that waited for an answer."
+
 ## Send files
 
 Add `attachments` to `notify`. Each file is a public `url`, or base64 `data` up to 20 MB with a `filename`. Beep Me keeps uploaded files for 7 days at an unguessable `/media/...` URL so text message providers can fetch them. Channels that cannot show a file get a link to it.
@@ -43,7 +67,7 @@ Every message shows the agent that sent it. Set `sender_name` to add a project n
 
 | Where | How |
 | --- | --- |
-| Beep Me dashboard | Open the message in [Activity](/) and tap a choice or write an answer. This works for every channel, so Slack, Discord, and Pushover messages link here. |
+| Beep Me dashboard | Open the message in [Activity](/) and tap a choice or write an answer. This works for every channel, so Slack, Discord, and Pushover messages link here. Select **Got it** to answer a message that asks nothing. |
 | ntfy | Tap a choice button on the notification, for questions with up to 3 options. |
 | Telegram | Tap a choice button, reply to the message, or send a plain message, a photo, a file, or a voice note in the chat or topic thread. Emoji reactions count too. The bot reacts 👀 when the agent reads your answer. See [Telegram](/docs/channels/telegram). |
 | Text message (Telnyx, Twilio) | Text back. A number or the exact option text picks a choice; anything else is a written answer. Photos come through as files. See [Telnyx SMS](/docs/channels/telnyx) and [Twilio SMS](/docs/channels/twilio). |
@@ -54,6 +78,7 @@ Each channel page lists what it supports. Open a message in Activity to see its 
 ## Next steps
 
 <Cards>
+<Card href="/docs/agents/waiting" title="Wait for answers">Wait for an answer at no token cost.</Card>
 <Card href="/docs/reference/mcp#get_replies" title="get_replies reference">Every input and output field.</Card>
 <Card href="/docs/reference/rest-api#replies" title="Replies over REST">Read answers from scripts and CI with curl.</Card>
 </Cards>

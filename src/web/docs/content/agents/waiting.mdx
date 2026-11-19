@@ -1,0 +1,82 @@
+An agent that asks you something has to wait for the answer. Each `get_replies` call costs tokens, even when no answer arrived. This page shows the ways an agent can wait, and which one costs the least.
+
+## Pick a way to wait
+
+| Situation | What the agent does |
+| --- | --- |
+| It has other work to do. | It keeps working and calls `get_replies` with `wait_seconds: 0` between steps. |
+| The answer comes in a minute or two, and it is blocked. | It calls `get_replies` with `wait_seconds: 50`, 2 or 3 times at most. |
+| The answer can take a long time, and it has a shell. | It runs the watch loop. The loop costs no tokens while it waits. |
+| It has no shell, for example Claude on the web. | It calls `get_replies` with `wait_seconds: 50` a few times, or it ends its turn. Fallbacks then reach you. |
+
+The `beep-me-ask-and-wait` skill teaches agents these steps. See [Skills and prompts](/docs/reference/mcp#skills-and-prompts).
+
+## The watch URL
+
+`notify` returns `watch_url` for a message that asks something: a message with `options` or `expect_reply: true`. The URL is signed, so it needs no token.
+
+```http
+GET https://your-beep-me.example/v1/watch/msg_123/<signature>?wait_seconds=50
+```
+
+The request waits up to 50 seconds, then returns:
+
+```json
+{ "message_id": "msg_123", "ready": false, "count": 0, "waited_seconds": 50 }
+```
+
+`ready` is `true` when the message has an answer. `count` is the number of answers. The response has no answer text, so the URL is safe in a shell log. When `ready` is `true`, the agent calls `get_replies` one time with the message ID.
+
+## The watch loop
+
+This loop calls the watch URL until an answer is ready, for up to 90 minutes. After a network error, it waits 15 seconds.
+
+```sh
+WATCH='<watch_url>'
+end=$((SECONDS+5400)); while [ $SECONDS -lt $end ]; do r=$(curl -fsS "$WATCH?wait_seconds=50") && case "$r" in *'"ready":true'*) echo "$r"; exit 0;; esac || sleep 15; done; echo "No answer after 90 minutes."; exit 2
+```
+
+| Exit code | Meaning |
+| --- | --- |
+| `0` | An answer is ready. Call `get_replies`. |
+| `2` | No answer after 90 minutes. |
+
+To wait a different time, change `5400` to the number of seconds. The text that `notify` returns has the loop with the URL filled in.
+
+## Background or foreground
+
+<Tabs>
+
+<Tab label="Background">
+
+Use the background when the agent has other work to do. In Claude Code, the agent runs the loop with the Bash tool and `run_in_background: true`. Claude Code tells the agent when the command exits. The agent then calls `get_replies`.
+
+</Tab>
+
+<Tab label="Foreground">
+
+Use the foreground when the agent cannot continue without the answer. The agent runs the loop as a normal command with a timeout longer than the wait. For example, use a 10 minute timeout and `end=$((SECONDS+540))`. If the loop exits with code `2`, the agent runs it again.
+
+</Tab>
+
+</Tabs>
+
+## Clients without a shell
+
+Claude on the web and on the phone cannot run a shell loop. The agent calls `get_replies` with `wait_seconds: 50` a few times. If you do not answer, the agent tells you what it needs and ends its turn. It reads your answer with `get_replies` when you come back.
+
+Set a **No answer** fallback so that the question reaches you again on another channel. See [Fallbacks](/docs/routing/fallbacks).
+
+## Next steps
+
+<Cards>
+
+<Card href="/docs/agents/replies" title="Replies and questions">
+How agents ask, and how Beep Me matches your answers.
+</Card>
+
+<Card href="/docs/routing/fallbacks" title="Fallbacks">
+Send a question again when nobody answers.
+</Card>
+
+</Cards>

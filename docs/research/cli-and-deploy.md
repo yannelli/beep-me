@@ -59,3 +59,7 @@ The CLI lists zones to suggest `beep.<zone>`, checks that a hostname is in one o
 ## Node type stripping
 
 Node.js 24 runs `.ts` files without a flag when they use only erasable syntax. The CLI project sets `erasableSyntaxOnly` and `allowImportingTsExtensions`, and imports use `.ts`. Node types come from `@types/node` 18.19, which is installed as a dependency of another package. `import.meta.dirname` is missing from those types, so `vite.config.ts` uses `fileURLToPath(new URL(".", import.meta.url))`.
+
+## Worker settings API, checked 2026-11-19
+
+`GET /accounts/{account_id}/workers/scripts/{script_name}/settings` returns `result.bindings`. D1 bindings carry `database_id` (`id` is a deprecated alias), KV bindings carry `namespace_id`, and plain-text vars carry `text`. `scripts/cli/cloudflare.ts` (`deployedValues`) reads them when `.beep-me/deploy.json` has no D1 or KV id. `/script-settings` is a different endpoint (Logpush and tail consumers only). Source: https://developers.cloudflare.com/api/resources/workers/subresources/scripts/subresources/script_and_version_settings/methods/get/
