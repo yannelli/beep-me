@@ -2,6 +2,12 @@
 
 All notable changes to Beep Me are documented here. Versions follow [Semantic Versioning](https://semver.org/). Commits follow [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/); see [CONTRIBUTING.md](CONTRIBUTING.md#versions) for how they map to releases.
 
+## [0.3.0] - 2026-11-19
+
+### Added
+
+- **telegram:** answer agents with buttons, replies, files, and reactions ([8bc9215](https://github.com/yannelli/beep-me/commit/8bc9215ee08f5674390b8007ba12b93a2b6be6bf))
+
 ## [0.2.0] - 2026-11-19
 
 ### Added
