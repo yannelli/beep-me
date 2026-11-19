@@ -80,9 +80,12 @@ async function connectInbound(ctx: VerifyContext<"twilio">, webhookToken: string
   const auth = { authorization: basicAuth(accountSid, authToken) };
   const list = await http(`${twilioApi(ctx.env, accountSid)}/IncomingPhoneNumbers.json?PhoneNumber=${encodeURIComponent(from)}`, { headers: auth });
   const numbers = isRecord(list.json) && Array.isArray(list.json.incoming_phone_numbers) ? list.json.incoming_phone_numbers : [];
-  const number: unknown = numbers[0];
+  const number: unknown = numbers.find((item: unknown) => isRecord(item) && item.phone_number === from);
   if (!list.ok || !isRecord(number) || typeof number.sid !== "string") return `Beep Me could not find ${from} in this account.`;
   const current = typeof number.sms_url === "string" ? number.sms_url : "";
+  if (typeof number.sms_application_sid === "string" && number.sms_application_sid) {
+    return `Replies are off: ${from} sends incoming texts to a TwiML app. To get replies, remove the app and set the URL to ${wanted}`;
+  }
   if (current === wanted) return "Replies are on.";
   if (current && current !== TWILIO_DEMO_REPLY && !current.includes(`/hooks/sms/twilio/${ctx.channel.id}/`)) {
     return `Replies are off: ${from} sends incoming texts to another URL. To get replies, set it to ${wanted}`;

@@ -10,28 +10,40 @@ import { useToast } from "../../lib/toast";
 import { numberType } from "./TelnyxConnect";
 import { SetupRow, TelnyxRegistration } from "./TelnyxRegistration";
 
-function ProfileRow({ state, busy, onAction }: { state: TelnyxSetupDTO; busy: boolean; onAction: (action: TelnyxAction) => void }) {
+function ProfilePicker({ state, busy, label, onAction }: { state: TelnyxSetupDTO; busy: boolean; label: string; onAction: (action: TelnyxAction) => void }) {
   const [profileId, setProfileId] = useState("");
-  if (state.profile) return <SetupRow ok title={`Messaging profile: ${state.profile.name}`} />;
+  const choices = state.profiles.filter((profile) => profile.id !== state.profile?.id);
+  if (!choices.length) return null;
+  return (
+    <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+      <div className="min-w-0 flex-1">
+        <SelectField label={label} value={profileId} onChange={(event) => setProfileId(event.target.value)}>
+          <option value="">Select a profile</option>
+          {choices.map((profile) => (
+            <option key={profile.id} value={profile.id}>
+              {profile.name}
+            </option>
+          ))}
+        </SelectField>
+      </div>
+      <Button disabled={!profileId} busy={busy} onClick={() => onAction({ action: "assign_profile", profileId })}>
+        Use this profile
+      </Button>
+    </div>
+  );
+}
+
+function ProfileRow({ state, busy, onAction }: { state: TelnyxSetupDTO; busy: boolean; onAction: (action: TelnyxAction) => void }) {
+  if (state.profile) {
+    return (
+      <SetupRow ok title={`Messaging profile: ${state.profile.name}`}>
+        <ProfilePicker state={state} busy={busy} label="Move to another profile" onAction={onAction} />
+      </SetupRow>
+    );
+  }
   return (
     <SetupRow ok={false} title="This number has no messaging profile. Telnyx needs one to send texts.">
-      {state.profiles.length > 0 && (
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
-          <div className="min-w-0 flex-1">
-            <SelectField label="Messaging profile" value={profileId} onChange={(event) => setProfileId(event.target.value)}>
-              <option value="">Select a profile</option>
-              {state.profiles.map((profile) => (
-                <option key={profile.id} value={profile.id}>
-                  {profile.name}
-                </option>
-              ))}
-            </SelectField>
-          </div>
-          <Button disabled={!profileId} busy={busy} onClick={() => onAction({ action: "assign_profile", profileId })}>
-            Use this profile
-          </Button>
-        </div>
-      )}
+      <ProfilePicker state={state} busy={busy} label="Messaging profile" onAction={onAction} />
       <Button small busy={busy} onClick={() => onAction({ action: "create_profile", name: "Beep Me" })}>
         Create a profile for Beep Me
       </Button>
