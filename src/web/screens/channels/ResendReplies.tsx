@@ -11,7 +11,7 @@ export function ResendReplies({ base, state, busyPath, run }: { base: string; st
     <div className="space-y-3">
       <h3 className="font-semibold">Replies</h3>
       {state.webhookUrl === null ? (
-        <p className="text-sm text-muted">Replies need a public https URL. Deploy Beep Me, then set up replies from the deployed dashboard.</p>
+        <p className="text-sm text-muted">Replies need a public https URL. Deploy Beep Me. Then set up replies from the deployed dashboard.</p>
       ) : (
         <>
           <div className="space-y-1.5">

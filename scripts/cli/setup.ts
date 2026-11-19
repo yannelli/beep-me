@@ -45,7 +45,7 @@ export async function emailsStep(ctx: Ctx): Promise<boolean> {
     return false;
   }
   saveOverlay(ctx, { allowedEmails: next });
-  say.ok(`Sign-in open to ${describeEmails(next)}.`);
+  say.ok(`Sign-in is open to ${describeEmails(next)}.`);
   return true;
 }
 
@@ -129,12 +129,12 @@ export async function setup(ctx: Ctx): Promise<void> {
   const deployed = await deployStep(ctx, upload);
   say.step("8. Google sign-in");
   const google = deployed || secrets.deployed ? await googleStep(ctx, secrets) : null;
-  if (!deployed && !secrets.deployed) say.skip("Skipped. Deploy first, then run bun run cli google.");
+  if (!deployed && !secrets.deployed) say.skip("Skipped. Deploy first. Then run bun run cli google.");
 
   say.step("9. Done");
   const origin = await primaryUrl(ctx);
   say.block("Beep Me is ready", connectText(origin));
-  say.info(`Next: open ${origin} on your phone, sign in with Google, add a channel, and select Test.`);
+  say.info(`Next, open ${origin} on your phone. Sign in with Google. Add a channel and select Test.`);
   say.info(dim(`Deployment values are in ${OVERLAY_FILE}. Manage this deployment with bun run cli.`));
   const path = await recordPath(ctx);
   if (path) writeRecord(ctx, path, account, origin, { ...upload, ...(google ?? {}) });

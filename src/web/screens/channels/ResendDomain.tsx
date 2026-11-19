@@ -65,7 +65,7 @@ function DomainDetail({ detail, base, busyPath, run }: Props & { detail: ResendD
           small
           busy={busyPath === verifyPath}
           disabled={busyPath !== null}
-          onClick={() => run({ title: "Check DNS again?", confirmLabel: "Check DNS", path: verifyPath, success: "Resend is checking the DNS records." })}
+          onClick={() => run({ title: "Check DNS again?", confirmLabel: "Check DNS", path: verifyPath, success: "Resend checks the DNS records again." })}
         >
           {busyPath !== verifyPath && <RefreshCw className="size-4" aria-hidden />}
           Check DNS again

@@ -38,7 +38,7 @@ export const say = {
 
 function unwrap<T>(value: T | symbol): T {
   if (p.isCancel(value)) {
-    p.cancel("Stopped. Steps that finished are kept.");
+    p.cancel("Stopped. The steps that finished stay in place.");
     process.exit(130);
   }
   return value as T;

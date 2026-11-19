@@ -26,7 +26,7 @@ export async function signIn(ctx: Ctx, options: { persist?: boolean } = {}): Pro
     if (!(await approve(ctx, "Open the Cloudflare sign-in page in your browser?"))) throw new Error("Sign in to Cloudflare to continue.");
     wrangler(ctx, ["login"], { inherit: true });
     me = whoami(ctx);
-    if (!me) throw new Error("Cloudflare sign-in did not finish. Run bunx wrangler login, then try again.");
+    if (!me) throw new Error("Cloudflare sign-in did not finish. Run bunx wrangler login. Then try again.");
   }
   const wanted = ctx.flags["account-id"] ?? ctx.overlay.accountId ?? process.env.CLOUDFLARE_ACCOUNT_ID;
   let account = me.accounts.find((entry) => entry.id === wanted);

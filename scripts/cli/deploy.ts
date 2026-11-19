@@ -44,7 +44,7 @@ function build(ctx: Ctx): void {
   if (!result.ok) {
     progress.fail("Build failed.");
     process.stderr.write(`${result.stdout}\n${result.stderr}`.trim().split("\n").slice(-30).join("\n") + "\n");
-    throw new Error("Fix the build error above, then run the command again.");
+    throw new Error("Fix the build error above. Then run the command again.");
   }
   progress.done(ctx.dryRun ? "Build skipped." : "Built.");
 }
@@ -105,7 +105,7 @@ export async function googleStep(ctx: Ctx, secrets: WorkerSecrets, replace = fal
   const origin = await primaryUrl(ctx);
   if (!ctx.interactive) {
     if (!flagId || !flagSecret) {
-      say.warn(`Google sign-in is not set. Add the redirect URI ${origin}/auth/google/callback to a Google client, then run bun run cli google.`);
+      say.warn(`Google sign-in is not set. Add the redirect URI ${origin}/auth/google/callback to a Google client. Then run bun run cli google.`);
       return null;
     }
     const values = { GOOGLE_CLIENT_ID: flagId, GOOGLE_CLIENT_SECRET: flagSecret };

@@ -36,7 +36,7 @@ function Interaction({ item }: { item: InteractionDTO }) {
       {item.media.map((file) => (
         <FileLink key={file.url} file={file} />
       ))}
-      {item.readAt === null && <Badge tone="accent">Not read by the agent yet</Badge>}
+      {item.readAt === null && <Badge tone="accent">The agent has not read this yet</Badge>}
     </li>
   );
 }

@@ -99,7 +99,7 @@ export function TelnyxConnect({
       />
       {error && <ErrorBox error={error} />}
       {account && account.numbers.length === 0 && (
-        <p className="rounded-xl bg-raised px-3 py-2.5 text-sm">This Telnyx account has no numbers that can send texts. Buy a number in the Telnyx portal, then try again.</p>
+        <p className="rounded-xl bg-raised px-3 py-2.5 text-sm">This Telnyx account has no numbers that can send texts. Buy a number in the Telnyx portal. Then try again.</p>
       )}
       {account && account.numbers.length > 0 && (
         <FieldGroup label="From number">

@@ -19,7 +19,7 @@ function checkHostname(hostname: string, zones: Zone[] | null): string | undefin
 async function askHostname(ctx: Ctx, zones: Zone[] | null, workersDev: string | null): Promise<string | null> {
   const current = ctx.overlay.domain;
   const options = [
-    { value: "", label: `Keep ${workersDev ?? "the workers.dev address"}`, hint: "free, no domain needed" },
+    { value: "", label: `Keep ${workersDev ?? "the workers.dev address"}`, hint: "free, needs no domain" },
     ...(current ? [{ value: current, label: current, hint: "current" }] : []),
     ...(zones ?? []).map((zone) => `beep.${zone.name}`).filter((name) => name !== current).map((name) => ({ value: name, label: name })),
     { value: "other", label: "Type a hostname" },
