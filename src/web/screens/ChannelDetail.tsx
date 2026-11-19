@@ -14,6 +14,7 @@ import { useToast } from "../lib/toast";
 import { channelStatus, useChannelToggle } from "./channels/ChannelCard";
 import { ChannelForm } from "./channels/ChannelForm";
 import { ChannelTests } from "./channels/ChannelTests";
+import { ResendSetup } from "./channels/ResendSetup";
 import { TelegramLink } from "./channels/TelegramLink";
 import { TelnyxSetup } from "./channels/TelnyxSetup";
 
@@ -106,6 +107,12 @@ function Detail({ channel }: { channel: ChannelDTO }) {
         </Card>
       )}
 
+      {channel.kind === "resend" && (
+        <Card title="Domain and replies">
+          <ResendSetup channel={channel} />
+        </Card>
+      )}
+
       {gmailOAuth && (
         <Card title="Google account">
           <p className="mb-3 text-sm text-muted">Sends as {String(channel.config.email ?? "your Google account")}.</p>
@@ -117,7 +124,7 @@ function Detail({ channel }: { channel: ChannelDTO }) {
 
       <Card title="Settings">
         <ChannelForm
-          key={formKey}
+          key={`${formKey}-${String(channel.config.domain ?? "")}`}
           kind={channel.kind}
           channel={channel}
           hidden={channel.kind === "gmail" ? ["mode", ...(gmailOAuth ? ["email"] : [])] : []}

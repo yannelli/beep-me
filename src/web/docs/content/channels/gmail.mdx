@@ -75,7 +75,19 @@ The email comes from your Gmail address. The subject has the priority, the title
 [High] Deploy failed · Claude Code
 ```
 
-The email has an HTML part and a plain text part. The HTML part has a colored bar for the priority, a line with the priority, agent, and topic, then the title, body, and link. On an `https://` deployment, it ends with a **View in Beep Me** link. Email has no silent mode, so quiet hours do not change it.
+The email has an HTML part and a plain text part. The HTML part has a colored bar for the priority, a line with the priority, sender, and topic, then the title, body, and link. When the agent offers choices, the email lists them as numbered lines. On an `https://` deployment, it ends with a **View in Beep Me** link. Email has no silent mode, so quiet hours do not change it.
+
+Replies to this email go to your own inbox. Beep Me does not read them, so the email does not ask you to reply. To answer agents by email, use [Resend](/docs/channels/resend) with an agent domain.
+
+Files from the agent are attached, up to 18 MB in total. Gmail allows 25 MB for each email, and file encoding adds about a third. Files that do not fit, and files that Beep Me cannot load, are listed as links under **Files**.
+
+## Subject prefix
+
+Set **Subject prefix** to put a tag at the start of each subject, for example `[Beep]`:
+
+```text
+[Beep] [High] Deploy failed · Claude Code
+```
 
 ## Keep Gmail connected
 

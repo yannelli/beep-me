@@ -1,7 +1,7 @@
 import { PRIORITY_INFO } from "../../shared/priority";
 import { isHttpUrl } from "./http";
-import { DOT, PRIORITY_COLOR, escapeHtml, metaLine, oneLine, parts, plainText } from "./render";
-import type { OutboundMessage } from "./types";
+import { DOT, PRIORITY_COLOR, escapeHtml, metaLine, oneLine, optionsText, parts, plainText } from "./render";
+import type { OutboundAttachment, OutboundMessage } from "./types";
 
 export interface EmailContent {
   subject: string;
@@ -9,23 +9,40 @@ export interface EmailContent {
   html: string;
 }
 
-export function renderEmail(message: OutboundMessage): EmailContent {
-  return { subject: emailSubject(message), text: emailText(message), html: emailHtml(message) };
+export interface EmailOptions {
+  subjectPrefix?: string;
+  /** True when replies to this email reach Beep Me. Adds "Reply with the number" and "Reply to this email to answer". */
+  replies?: boolean;
+  /** Files that did not fit in the email. The body links to them. */
+  links?: OutboundAttachment[];
 }
 
-/** "[High] <title> · <agent>", with "[Test]" in front for test messages. */
-export function emailSubject(message: OutboundMessage): string {
+export function renderEmail(message: OutboundMessage, options: EmailOptions = {}): EmailContent {
+  return { subject: emailSubject(message, options.subjectPrefix), text: emailText(message, options), html: emailHtml(message, options) };
+}
+
+/** "[High] <title> · <agent>", with "[Test]" in front for test messages and the channel's prefix before that. */
+export function emailSubject(message: OutboundMessage, prefix?: string): string {
   const tag = `[${PRIORITY_INFO[message.priority].label}]`;
-  const subject = `${message.test ? "[Test] " : ""}${tag} ${parts(message).headline}${DOT}${message.agent.name}`;
+  const subject = `${prefix ? `${prefix} ` : ""}${message.test ? "[Test] " : ""}${tag} ${parts(message).headline}${DOT}${message.agent.name}`;
   return oneLine(subject);
 }
 
-function emailText(message: OutboundMessage): string {
-  const footer = message.appUrl.startsWith("https://") ? `\n\nView in Beep Me: ${message.appUrl}` : "";
-  return `${plainText(message)}${footer}`;
+function replyPrompt(message: OutboundMessage, options: EmailOptions): string | null {
+  if (!options.replies) return null;
+  if (message.options.length) return "Reply with the number.";
+  return message.expectReply ? "Reply to this email to answer." : null;
 }
 
-function emailHtml(message: OutboundMessage): string {
+function emailText(message: OutboundMessage, options: EmailOptions): string {
+  const list = message.options.map((option, index) => `${index + 1}. ${option}`).join("\n");
+  const answer = !options.replies ? list : message.options.length ? optionsText(message) : replyPrompt(message, options);
+  const files = options.links?.length ? `Files:\n${options.links.map((file) => `- ${file.name}: ${file.url}`).join("\n")}` : "";
+  const footer = message.appUrl.startsWith("https://") ? `View in Beep Me: ${message.appUrl}` : "";
+  return [plainText(message), answer, files, footer].filter(Boolean).join("\n\n");
+}
+
+function emailHtml(message: OutboundMessage, options: EmailOptions): string {
   const { headline, body } = parts(message);
   const color = PRIORITY_COLOR[message.priority];
   const paragraphs = body
@@ -41,6 +58,16 @@ function emailHtml(message: OutboundMessage): string {
   const app = message.appUrl.startsWith("https://")
     ? `<p style="margin:24px 0 0;font-size:12px;color:#6b7280"><a href="${escapeHtml(message.appUrl)}" style="color:#6b7280">View in Beep Me</a></p>`
     : "";
+  const choices = message.options.length
+    ? `<ol style="margin:0 0 12px;padding-left:24px">${message.options.map((option) => `<li style="margin:0 0 4px">${escapeHtml(option)}</li>`).join("")}</ol>`
+    : "";
+  const prompt = replyPrompt(message, options);
+  const promptHtml = prompt ? `<p style="margin:0 0 12px;font-weight:600">${escapeHtml(prompt)}</p>` : "";
+  const files = options.links?.length
+    ? `<p style="margin:16px 0 4px;font-size:13px;color:#4b5563">Files</p><ul style="margin:0;padding-left:24px">${options.links
+        .map((file) => `<li><a href="${escapeHtml(file.url)}" style="color:${color}">${escapeHtml(file.name)}</a></li>`)
+        .join("")}</ul>`
+    : "";
   return [
     `<!doctype html><html><body style="margin:0;padding:24px;background:#f3f4f6;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#111827">`,
     `<div style="max-width:560px;margin:0 auto;background:#ffffff;border-radius:8px;overflow:hidden">`,
@@ -49,7 +76,10 @@ function emailHtml(message: OutboundMessage): string {
     `<p style="margin:0 0 8px;font-size:13px;color:#4b5563">${escapeHtml(metaLine(message))}</p>`,
     `<h1 style="margin:0 0 16px;font-size:20px;line-height:1.3">${escapeHtml(headline)}</h1>`,
     paragraphs,
+    choices,
+    promptHtml,
     link,
+    files,
     app,
     `</div></div></body></html>`,
   ].join("");
@@ -78,4 +108,38 @@ export function base64(bytes: Uint8Array): string {
   let binary = "";
   for (let i = 0; i < bytes.length; i += 0x8000) binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
   return btoa(binary);
+}
+
+export interface PlannedFile {
+  attachment: OutboundAttachment;
+  /** null when the provider fetches the file from its URL. */
+  bytes: Uint8Array | null;
+}
+
+/** Attaches files in order while their total stays within `budget` bytes. The rest, and files that fail to load, become links. */
+export async function planAttachments(
+  attachments: OutboundAttachment[],
+  budget: number,
+  byUrl: (attachment: OutboundAttachment) => boolean = () => false,
+): Promise<{ files: PlannedFile[]; links: OutboundAttachment[] }> {
+  const files: PlannedFile[] = [];
+  const links: OutboundAttachment[] = [];
+  let left = budget;
+  for (const attachment of attachments) {
+    if (attachment.size !== null && attachment.size > left) {
+      links.push(attachment);
+    } else if (attachment.size !== null && byUrl(attachment)) {
+      files.push({ attachment, bytes: null });
+      left -= attachment.size;
+    } else {
+      const bytes = await attachment.load().catch(() => null);
+      if (!bytes || bytes.byteLength > left) {
+        links.push(attachment);
+        continue;
+      }
+      files.push({ attachment, bytes });
+      left -= bytes.byteLength;
+    }
+  }
+  return { files, links };
 }

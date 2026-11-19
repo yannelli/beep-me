@@ -1,7 +1,7 @@
 import { connect } from "cloudflare:sockets";
 import { LogLevel, WorkerMailer, type User } from "worker-mailer";
 import { clip } from "./http";
-import { encodeSubject, renderEmail, type EmailContent } from "./render-email";
+import { base64, encodeSubject, planAttachments, renderEmail, type EmailContent, type PlannedFile } from "./render-email";
 import type { ChannelAdapter, SendResult } from "./types";
 
 export interface SmtpOptions {
@@ -17,6 +17,8 @@ export interface SmtpOptions {
 }
 
 const TIMEOUT_MS = 10_000;
+/** Many mail servers refuse messages over 25 MB. Base64 makes files about 4/3 larger. */
+export const EMAIL_ATTACHMENT_BUDGET = 18 * 1024 * 1024;
 
 /** worker-mailer falls back to plaintext AUTH when STARTTLS is missing, so check the server's EHLO first. */
 async function serverOffersStartTls(host: string, port: number): Promise<boolean> {
@@ -50,7 +52,7 @@ async function serverOffersStartTls(host: string, port: number): Promise<boolean
   }
 }
 
-export async function sendSmtp(options: SmtpOptions, content: EmailContent): Promise<SendResult> {
+export async function sendSmtp(options: SmtpOptions, content: EmailContent, files: PlannedFile[] = []): Promise<SendResult> {
   let mailer: WorkerMailer | null = null;
   try {
     if (options.security === "starttls" && !(await serverOffersStartTls(options.host, options.port))) {
@@ -74,6 +76,7 @@ export async function sendSmtp(options: SmtpOptions, content: EmailContent): Pro
       text: content.text,
       html: content.html,
       headers: { ...options.headers, Subject: encodeSubject(content.subject) },
+      attachments: files.flatMap(({ attachment, bytes }) => (bytes ? [{ filename: attachment.name, content: base64(bytes), mimeType: attachment.mime }] : [])),
     });
     return { ok: true, detail: `Accepted by ${options.host}` };
   } catch (error) {
@@ -98,8 +101,9 @@ function smtpError(error: unknown, options: SmtpOptions): string {
 
 export const smtp: ChannelAdapter<"smtp"> = {
   kind: "smtp",
-  send(ctx, message) {
-    const { host, port, security, username, password, from, to } = ctx.config;
-    return sendSmtp({ host, port, security, username, password, from, to }, renderEmail(message));
+  async send(ctx, message) {
+    const { host, port, security, username, password, from, to, subjectPrefix } = ctx.config;
+    const { files, links } = await planAttachments(message.attachments, EMAIL_ATTACHMENT_BUDGET);
+    return sendSmtp({ host, port, security, username, password, from, to }, renderEmail(message, { subjectPrefix, links }), files);
   },
 };

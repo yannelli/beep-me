@@ -1,9 +1,12 @@
-Resend sends Beep Me messages as email through the Resend API. With automatic routes, email gets a priority only when no channel higher in the list can take it. See [Which messages each channel gets](/docs/channels#which-messages-each-channel-gets). Email has no silent mode, so quiet hours do not change it.
+Resend sends Beep Me messages as email through the Resend API. With an agent domain, each agent sends from its own address, like `claude-code+1a2b3c4d5e@agents.example.com`, and you can answer an agent by replying to its email.
+
+With automatic routes, email gets a priority only when no channel higher in the list can take it. See [Which messages each channel gets](/docs/channels#which-messages-each-channel-gets). Email has no silent mode, so quiet hours do not change it.
 
 ## Before you start
 
 - A Resend account. Sign up at [resend.com](https://resend.com/).
-- A domain that you can add DNS records to, for the **From** address.
+- A domain that you can add DNS records to. Use a subdomain, like `agents.example.com`, if the domain already gets email.
+- For replies, a Beep Me deployment on `https://`. Resend cannot post to `localhost`.
 
 Resend's test address `onboarding@resend.dev` sends only to the email address of your Resend account. To send to any other address, verify a domain. See [Resend's guide to this error](https://resend.com/docs/knowledge-base/403-error-resend-dev-domain).
 
@@ -11,19 +14,27 @@ Resend's test address `onboarding@resend.dev` sends only to the email address of
 
 <Steps>
 
-### Verify your domain
-
-Open [Domains](https://resend.com/domains) in Resend. Add your domain. At your DNS provider, add the DNS records that Resend shows. Wait until Resend shows the domain as verified.
-
 ### Create an API key
 
-Open [API keys](https://resend.com/api-keys) in Resend. Create a key. Copy the key. A key with sending access is enough.
+Open [API keys](https://resend.com/api-keys) in Resend. Create a key with **Full access**. Copy the key.
+
+A key with **Sending access** can send email, but Beep Me cannot use it to set up a domain or read your replies.
 
 ### Add the channel in Beep Me
 
-Open [Channels](/channels). Select **Add channel**. Select **Resend**. Fill in **API key**, **From**, and **Send to**. Select **Add channel**.
+Open [Channels](/channels). Select **Add channel**. Select **Resend**. Fill in **API key** and **Send to**. If you already have a verified domain and do not want agent addresses, fill in **From** too. Select **Add channel**.
 
-Beep Me does not check the key when you save. The first test shows if Resend accepts it.
+### Set up the agent domain
+
+Open the channel. In **Domain and replies**, pick a domain that is already in Resend and select **Use**. Or enter a new domain, select a region, and select **Add domain**. Beep Me adds it to Resend with sending and receiving on.
+
+Beep Me shows the DNS records that Resend asks for. Add them at your DNS provider. If Cloudflare serves the domain, Beep Me says so and shows the records as a zone file. Paste them in the Cloudflare dashboard, or import the zone file. Then select **Check DNS again** until Resend shows the domain as verified.
+
+If the domain does not receive email yet, select **Turn on receiving**. Resend adds an MX record for you to add.
+
+### Turn on replies
+
+In **Domain and replies**, select **Create webhook**. Beep Me creates a Resend webhook for `email.received` that points at `https://<your Beep Me>/hooks/resend/<channel id>`, and saves its signing secret. If a webhook for that URL already exists, Beep Me uses it.
 
 ### Send a test
 
@@ -31,15 +42,49 @@ Select **Test**. An email with the subject `[Test] [Medium] Test from Beep Me ·
 
 </Steps>
 
+Beep Me shows what each change does and waits for you to confirm it before it changes anything in Resend.
+
 ## Fields
 
 <ChannelFields kind="resend" />
 
-Write **From** as `Name <address>` or as an address only, for example `Beep Me <alerts@example.com>`.
+Write **From** as `Name <address>` or as an address only, for example `Beep Me <alerts@example.com>`. With an agent domain, tests and messages that have no agent use **From**. When **From** is empty, they come from `beep@<agent domain>`.
+
+## Agent addresses
+
+Each agent gets one address on the agent domain. The address does not change:
+
+```text
+<agent name>+<agent id>@<agent domain>
+claude-code+1a2b3c4d5e@agents.example.com
+```
+
+The part after `+` is 10 letters and digits that Beep Me makes from the agent ID. When you rename an agent, the name part changes, and replies to the old address still reach the agent.
+
+The **From** name is the `sender_name` that the agent set on the message, like `Cat Design Project`. Without a `sender_name`, it is the agent name. **Reply-To** is the agent address.
+
+## Replies by email
+
+Reply to an email from an agent. Beep Me records your answer, and the agent reads it with `get_replies` or `GET /v1/replies`. See [Replies](/docs/agents/replies).
+
+- Beep Me matches your reply to the message from the `In-Reply-To` and `References` headers.
+- Beep Me removes the quoted email, the "On ... wrote:" line, and your signature. It keeps what you wrote.
+- When the message offered choices, a reply of only `2`, `2.`, `#2`, or the choice text records that choice.
+- Files that you attach go to the agent. Beep Me gets each file from Resend when the agent asks for it.
+- A new email to an agent address, with no message to answer, also reaches that agent.
+- Beep Me records email only from the **Send to** address. It ignores email from other senders, and email to other domains.
+
+## Subject prefix
+
+Set **Subject prefix** to put a tag at the start of each subject, for example `[Beep]`:
+
+```text
+[Beep] [High] Deploy failed · Claude Code
+```
 
 ## How messages look
 
-The subject has the priority, the title, and the agent name:
+The subject has the prefix, the priority, the title, and the agent name:
 
 ```text
 [High] Deploy failed · Claude Code
@@ -48,9 +93,12 @@ The subject has the priority, the title, and the agent name:
 The email has an HTML part and a plain text part. The HTML part has:
 
 - A colored bar at the top. The color shows the priority: red for Urgent, orange for High, blue for Medium, gray for Low.
-- A line with the priority, the agent name, and the topic.
-- The title as a heading, then the body and the link.
-- A **View in Beep Me** link to the message, when your deployment uses `https://`.
+- A line with the priority, the sender, and the topic.
+- The title as a heading, then the body.
+- The choices as a numbered list. With replies on, the email says "Reply with the number." When the agent waits for an answer and offered no choices, it says "Reply to this email to answer."
+- The link, and a **View in Beep Me** link when your deployment uses `https://`.
+
+Files from the agent are attached, up to 28 MB in total. Resend allows 40 MB for each email, and file encoding adds about a third. Files that do not fit, and files that Beep Me cannot load, are listed as links under **Files**.
 
 Beep Me sends each message with an idempotency key. If Beep Me sends the same request again after an error, Resend does not send a second email.
 
@@ -61,9 +109,13 @@ Beep Me shows Resend errors as `Resend <HTTP status>: <message from Resend>`. Se
 | You see | What to do |
 | --- | --- |
 | "Resend API keys start with re_." | Copy the full key from the API keys page. |
+| "Enter a From address, or set up an agent domain." | Fill in **From**, or fill in **Agent domain**. |
+| "This Resend API key can only send." | Create a key with **Full access**. Paste it in **API key**. |
 | `Resend 401` and "API key is invalid" | The key was deleted or is not active. Create a new key. Paste it in **API key**. |
-| `Resend 403` and "You can only send testing emails to your own email address" | You send from `onboarding@resend.dev`. Verify a domain. Use an address on that domain in **From**. |
-| `Resend 403` and "The ... domain is not verified" | The domain in **From** is not verified. Verify it in Resend, or change **From**. |
+| `Resend 403` and "You can only send testing emails to your own email address" | You send from `onboarding@resend.dev`. Verify a domain. Use it as the agent domain or in **From**. |
+| `Resend 403` and "The ... domain is not verified" | Add the DNS records. Then select **Check DNS again**. |
+| "Replies need a public https URL." | Deploy Beep Me. Create the webhook from the deployed dashboard. |
+| A reply does not reach the agent | Reply from the **Send to** address. Check that the receiving MX record is verified, and that the webhook is on in Resend. |
 | `Resend 429` | You reached the Resend rate limit or your daily quota. Wait, or upgrade your Resend plan. |
 
 For other problems, see [Troubleshooting](/docs/reference/troubleshooting).
@@ -72,8 +124,8 @@ For other problems, see [Troubleshooting](/docs/reference/troubleshooting).
 
 <Cards>
 
-<Card href="/docs/routing/routes-and-rules" title="Routes and rules">
-Send some priorities to email and others to your phone.
+<Card href="/docs/agents/replies" title="Replies">
+How agents read your answers.
 </Card>
 
 <Card href="/docs/routing/delivery-log" title="Delivery log">

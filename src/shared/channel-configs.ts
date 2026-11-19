@@ -9,6 +9,16 @@ const httpsUrl = z
   .url("Enter a full URL.")
   .refine((value) => /^https:\/\//i.test(value) || /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?\//i.test(value), "Use an https URL.");
 const optionalText = z.string().trim().optional().transform((value) => (value ? value : undefined));
+const subjectPrefix = z.string().trim().max(40).optional().transform((value) => (value ? value : undefined));
+const domainName = z
+  .string()
+  .trim()
+  .toLowerCase()
+  .regex(/^([a-z0-9]([a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,}$/, "Enter a domain, like agents.example.com.")
+  .optional()
+  .or(z.literal("").transform(() => undefined));
+/** Test mocks only: the API base can point at a local server, never at another host. */
+const localApiBase = z.string().regex(/^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/).optional();
 
 /** Stored config for each channel kind. Fields not in the catalog form are set by the server. */
 export const channelConfigSchemas = {
@@ -46,11 +56,19 @@ export const channelConfigSchemas = {
     /** Path secret of the inbound URL /hooks/telnyx/<channel>/<token>. */
     webhookToken: z.string().optional(),
   }),
-  resend: z.object({
-    apiKey: z.string().trim().startsWith("re_", "Resend API keys start with re_."),
-    from: z.string().trim().min(3),
-    to: email,
-  }),
+  resend: z
+    .object({
+      apiKey: z.string().trim().startsWith("re_", "Resend API keys start with re_."),
+      from: optionalText,
+      to: email,
+      /** Each agent sends from and gets replies at its own address on this domain. */
+      domain: domainName,
+      subjectPrefix,
+      webhookSecret: z.string().trim().startsWith("whsec_", "Resend signing secrets start with whsec_.").optional().or(z.literal("").transform(() => undefined)),
+      webhookId: z.string().optional(),
+      apiBase: localApiBase,
+    })
+    .refine((config) => Boolean(config.from || config.domain), { path: ["from"], message: "Enter a From address, or set up an agent domain." }),
   gmail: z.discriminatedUnion("mode", [
     z.object({
       mode: z.literal("oauth"),
@@ -59,12 +77,14 @@ export const channelConfigSchemas = {
       accessToken: z.string().optional(),
       accessTokenExpiresAt: z.number().optional(),
       to: email.optional().or(z.literal("").transform(() => undefined)),
+      subjectPrefix,
     }),
     z.object({
       mode: z.literal("app_password"),
       email,
       appPassword: z.string().trim().transform((value) => value.replace(/\s+/g, "")).pipe(z.string().length(16, "App passwords have 16 letters.")),
       to: email.optional().or(z.literal("").transform(() => undefined)),
+      subjectPrefix,
     }),
   ]),
   smtp: z.object({
@@ -75,6 +95,7 @@ export const channelConfigSchemas = {
     password: z.string().min(1),
     from: z.string().trim().min(3),
     to: email,
+    subjectPrefix,
   }),
   slack: z.object({
     webhookUrl: httpsUrl.refine((value) => value.startsWith("https://hooks.slack.com/"), "Slack webhook URLs start with https://hooks.slack.com/."),

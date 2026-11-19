@@ -76,6 +76,7 @@ The agent's next request gets HTTP 401. To revoke an agent, open it on the [Agen
 | `/hooks/ntfy/<channel>/<message>/<choice>/<signature>` | The signature must be the HMAC of the channel, message, and choice. The message must belong to the channel's owner. |
 | `/hooks/telnyx/<channel>/<token>` | The token must match the channel's own random token. The `telnyx-signature-ed25519` header must be a valid Ed25519 signature of `<telnyx-timestamp>\|<raw body>` for the public key that you saved, and the timestamp must be within 5 minutes. |
 | `/hooks/sms/twilio/<channel>/<token>` | The token must match the channel's own random token. The `X-Twilio-Signature` header must match the HMAC-SHA1 of the URL and the form fields, keyed with the channel's auth token. |
+| `/hooks/resend/<channel>` | The Svix signature must match the channel's Resend signing secret, and the timestamp must be within 5 minutes. Beep Me records only email from the channel's **Send to** address, sent to an address on the channel's domain. |
 
 Each check that fails returns HTTP 401 or 403.
 

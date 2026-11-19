@@ -33,10 +33,19 @@ The dashboard talks to the Worker over same-origin JSON under `/api`. The sessio
 | GET | `/api/integrations/telnyx/channels/:id` | | `TelnyxSetupDTO` (number, profile, reply webhook, public key, 10DLC or toll-free status) |
 | POST | `/api/integrations/telnyx/channels/:id/plan` | `TelnyxAction` | `TelnyxPlanDTO`. Changes nothing in Telnyx. |
 | POST | `/api/integrations/telnyx/channels/:id/actions` | `TelnyxAction & { confirm: true }` | `TelnyxSetupDTO`. Without `confirm: true`: 409 `{ error, plan }` and no change. |
-| * | `/api/integrations/resend/*` | | Resend domains and inbound email setup |
+| GET | `/api/integrations/resend/:channel` | | `ResendSetupState` (saved domain, webhook URL and status, key error) |
+| GET | `/api/integrations/resend/:channel/domains` | | `{ items: ResendDomainSummary[] }` |
+| GET | `/api/integrations/resend/:channel/domains/:domain` | | `ResendDomainDetail` (records, Cloudflare zone check, zone file) |
+| POST | `/api/integrations/resend/:channel/domains` | `ResendCreateDomainBody` | `ResendDomainDetail` (sending and receiving on) |
+| POST | `/api/integrations/resend/:channel/domains/:domain/receiving` | `{ confirm }` | `ResendDomainDetail` |
+| POST | `/api/integrations/resend/:channel/domains/:domain/verify` | `{ confirm }` | `ResendDomainDetail` |
+| POST | `/api/integrations/resend/:channel/domains/:domain/use` | `{ confirm }` | `ResendDomainDetail`, saves the agent domain on the channel |
+| POST | `/api/integrations/resend/:channel/webhook` | `{ confirm }` | `{ ok, webhookId }`, creates or reuses the `email.received` webhook and saves its secret |
 | PATCH | `/api/topics/:id` | `{ muted: boolean }` | `TopicDTO` |
 | POST | `/auth/logout` | | `{ ok: true }` |
 | DELETE | `/api/account` | | `{ ok: true }` |
+
+Every Resend setup POST without `confirm: true` changes nothing and returns 409 `ResendPreview` (`{ error, preview: { method, path, body, summary } }`). Types are in `src/shared/resend.ts`.
 
 ## Agent endpoints
 
@@ -56,4 +65,4 @@ The dashboard talks to the Worker over same-origin JSON under `/api`. The sessio
 | POST | `/hooks/sms/:delivery/:signature` | Twilio and Telnyx delivery receipts |
 | POST | `/hooks/telnyx/:channel/:token` | Inbound Telnyx texts and MMS. Checked with the channel token and the Ed25519 signature. |
 | POST | `/hooks/sms/twilio/:channel/:token` | Inbound Twilio texts and MMS. Checked with the channel token and `X-Twilio-Signature`. |
-| POST | `/hooks/resend/*` | Inbound email from Resend |
+| POST | `/hooks/resend/:channel` | Inbound email from Resend (`email.received`), checked with the Svix signature and the channel's signing secret |

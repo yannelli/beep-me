@@ -1,6 +1,6 @@
 # Channel provider facts
 
-Created: 2026-11-18. Last updated: 2026-11-19.
+Created: 2026-11-18. Last updated: 2026-11-19 (Resend receiving, domains, webhooks; email attachments).
 
 What the adapters in `src/worker/channels/` rely on, checked against each provider's official docs on 2026-11-18. Shared HTTP rules for all adapters: 10 s timeout, one retry on 429 or 5xx (waits for Retry-After, at most 3 s), no retry after a timeout or network error.
 
@@ -54,18 +54,49 @@ What the adapters in `src/worker/channels/` rely on, checked against each provid
 ## Resend
 
 - Source: https://resend.com/docs/api-reference/emails/send-email, https://resend.com/docs/api-reference/introduction, https://resend.com/docs/api-reference/rate-limit, https://resend.com/docs/api-reference/errors
-- Endpoint: `POST https://api.resend.com/emails`, `Authorization: Bearer re_...`, JSON `{ from, to, subject, html, text }`. Response `{ id }`.
-- Every request needs a `User-Agent` header or Resend returns 403. The adapter sends `BeepMe/0.1`.
-- `Idempotency-Key`: 1-256 characters, kept 24 hours. Same key with a different body returns 409 `invalid_idempotent_request`.
-- Rate limit: 10 requests per second per team, 429 `rate_limit_exceeded` with `retry-after`. Daily and monthly quota errors are also 429.
-- Sending-only keys get 401 `restricted_api_key` on read endpoints, so there is no verify call.
+- Endpoint: `POST https://api.resend.com/emails`, `Authorization: Bearer re_...`, JSON `{ from, to, reply_to, subject, html, text, headers, attachments }`. Response `{ id }` only.
+- Every request needs a `User-Agent` header or Resend returns 403 (error code 1010). The adapter sends `BeepMe/0.1`.
+- `Idempotency-Key`: 1-256 characters, kept 24 hours. Same key with a different body returns 409 `invalid_idempotent_request`. The adapter's Message-ID and References are built from the message and channel ids, so a resend has the same body.
+- Rate limit: 10 requests per second per team, shared by all keys, 429 `rate_limit_exceeded` with `retry-after`. Sent and received email both count toward the quotas.
+- `from` takes `Name <address>`. `reply_to` is a string or an array. `headers` is an object of custom headers; the docs list no restricted headers.
+- Attachments (https://resend.com/docs/dashboard/emails/attachments): `filename`, `content` (base64) or `path` (public URL), `content_type`, `content_id`. 40 MB per email after base64 encoding. The adapter attaches up to 28 MB of files: `path` for files with a known size on an https URL, base64 otherwise. Larger files and files that fail to load become links in the body.
+- API keys (https://resend.com/docs/api-reference/api-keys/create-api-key): `full_access` or `sending_access`. A sending key gets 401 `restricted_api_key` ("This API key is restricted to only send emails.") on every other endpoint. Domain setup, webhooks, and reading received email need full access.
+
+### Resend receiving
+
+- Source: https://resend.com/docs/dashboard/receiving/introduction, https://resend.com/docs/dashboard/receiving/custom-domains, https://resend.com/docs/dashboard/receiving/create-receiving-webhook, https://resend.com/docs/webhooks/emails/received
+- Receiving on a custom domain needs the MX record that the domain page shows (`receive.forge.rmta.net`, a regional variant, or `inbound-smtp.<region>.amazonaws.com`). It must have the lowest priority value on that name. Resend suggests a subdomain when the domain already gets email.
+- Catch-all: "Any email sent to any username at your receiving domain will be received by Resend and forwarded to your webhook."
+- The `email.received` webhook carries metadata only: `email_id`, `from` (bare address), `to[]`, `cc[]`, `bcc[]`, `received_for[]`, `message_id`, `subject`, `attachments[] { id, filename, content_type, content_disposition, content_id }`.
+- `GET /emails/receiving/:id` (https://resend.com/docs/api-reference/emails/retrieve-received-email) returns `text`, `html`, `headers` (lowercase keys), `reply_to`, `message_id`, `authentication`, `raw { download_url, expires_at }`, and `attachments[]`. There are no separate `in_reply_to` or `references` fields. The hook reads them from `headers`, else from the top of the raw message.
+- `GET /emails/receiving/:email_id/attachments/:id` (https://resend.com/docs/api-reference/emails/retrieve-received-email-attachment) returns `download_url`, valid for 1 hour (https://resend.com/docs/dashboard/receiving/attachments). Beep Me stores `<email id>/<attachment id>` and asks for a new URL on each download.
+- Threading a reply: set `In-Reply-To` and `References` (https://resend.com/docs/dashboard/receiving/reply-to-emails).
+
+### Resend webhooks
+
+- Source: https://resend.com/docs/webhooks/verify-webhooks-requests, https://docs.svix.com/receiving/verifying-payloads/how-manual, https://resend.com/docs/webhooks/retries-and-replays, https://resend.com/docs/api-reference/webhooks/create-webhook
+- Svix headers `svix-id`, `svix-timestamp` (Unix seconds), `svix-signature` (space-separated `v1,<base64>`). Signed content is `<svix-id>.<svix-timestamp>.<raw body>`, HMAC-SHA256 with the base64-decoded part of the secret after `whsec_`. The Svix libraries reject timestamps more than 5 minutes off; the hook does the same.
+- Retries: at once, then 5 s, 5 min, 30 min, 2 h, 5 h, 10 h, 10 h. Resend turns off an endpoint that keeps failing. The hook answers 502 when it cannot fetch the email, so Resend tries again; the email id dedupes the interaction.
+- `POST /webhooks { endpoint, events }` returns `{ object, id, signing_secret }`. `GET /webhooks` lists `{ id, endpoint, events, status, created_at }` without the secret. `GET /webhooks/:id` includes `signing_secret`.
+
+### Resend domains
+
+- Source: https://resend.com/docs/api-reference/domains/create-domain, https://resend.com/docs/api-reference/domains/update-domain, https://resend.com/docs/api-reference/domains/get-domain, https://resend.com/docs/api-reference/domains/verify-domain, https://resend.com/docs/dashboard/domains/manage-domains
+- `POST /domains { name, region, capabilities: { sending, receiving } }`. Regions `us-east-1` (default), `eu-west-1`, `sa-east-1`, `ap-northeast-1`. Capabilities are `enabled` or `disabled`; receiving defaults to disabled.
+- `PATCH /domains/:id { capabilities: { receiving: "enabled" } }` turns on receiving. `POST /domains/:id/verify` starts an asynchronous check.
+- `GET /domains/:id` returns `records[] { record, name, type, ttl, status, value, priority }`. Status values: `not_started`, `pending`, `verified`, `partially_verified`, `partially_failed`, `failed`, `temporary_failure`.
+
+## Email size limits
+
+- Gmail: 25 MB per message for personal accounts (https://support.google.com/mail/answer/6584). The Gmail channel sends through the media upload URI `POST https://gmail.googleapis.com/upload/gmail/v1/users/{userId}/messages/send` with `uploadType=media` and `Content-Type: message/rfc822` (https://developers.google.com/workspace/gmail/api/reference/rest/v1/users.messages/send, https://developers.google.com/workspace/gmail/api/guides/uploads), so files are base64 encoded once.
+- Gmail and SMTP attach up to 18 MB of files (about 24 MB after base64). SMTP servers set their own limits; 25 MB is common.
 
 ## Gmail (OAuth and app password)
 
 - Source: https://developers.google.com/identity/protocols/oauth2/web-server, https://developers.google.com/identity/protocols/oauth2, https://developers.google.com/workspace/gmail/api/guides/sending, https://developers.google.com/workspace/gmail/api/guides/handle-errors, https://support.google.com/accounts/answer/185833, https://knowledge.workspace.google.com/admin/sync/transition-from-less-secure-apps-to-oauth
 - Token refresh: `POST https://oauth2.googleapis.com/token`, form `grant_type=refresh_token, client_id, client_secret, refresh_token`. Response `{ access_token, expires_in }`. A revoked or expired refresh token returns HTTP 400 `{ error: "invalid_grant" }`.
 - Refresh tokens stop working when the OAuth app is in Testing status (7 days), after 6 months unused, after a password change (Gmail scopes), or past 100 tokens per client ID.
-- Send: `POST https://gmail.googleapis.com/gmail/v1/users/me/messages/send`, JSON `{ raw }`, base64url of an RFC 2822 message. Scope: `gmail.send` (or compose, modify, full mail).
+- Send: `POST https://gmail.googleapis.com/upload/gmail/v1/users/me/messages/send?uploadType=media` with `Content-Type: message/rfc822` and the raw multipart/mixed message as the body. Scope: `gmail.send` (or compose, modify, full mail). See [Email size limits](#email-size-limits).
 - Errors: `{ error: { code, message, errors: [{ domain, reason, message }] } }`.
 - The adapter stores `accessTokenExpiresAt` in epoch milliseconds and refreshes 60 s before expiry, or once after a 401.
 - App password mode: `smtp.gmail.com:465` implicit TLS. Needs 2-Step Verification. Not offered for work or school accounts, Advanced Protection, or security-key-only 2SV. Google turned off plain-password SMTP on 2025-03-14; app passwords still work. Limit: 2,000 messages per day.
@@ -76,6 +107,7 @@ What the adapters in `src/worker/channels/` rely on, checked against each provid
 - `security: "tls"` maps to `{ secure: true, startTls: false }` (socket `secureTransport: "on"`, port 465). `"starttls"` maps to `{ secure: false, startTls: true }` (port 587).
 - worker-mailer authenticates only with methods listed in `authType`; the default is none. The adapter passes `["plain", "login", "cram-md5"]`.
 - In STARTTLS mode worker-mailer upgrades only when the server advertises STARTTLS. Without it, it continues in plain text, including AUTH.
+- worker-mailer always writes multipart/mixed. `attachments[] { filename, content (base64), mimeType }` become base64 parts wrapped at 72 characters.
 - worker-mailer writes a non-ASCII subject as one unfolded Q-encoded word. The adapter sets the `Subject` header itself with folded RFC 2047 B-encoded words.
 - Cloudflare blocks port 25, Cloudflare IP ranges, localhost and private IPs. A socket counts toward the 6 simultaneous connections per request.
 
@@ -138,10 +170,14 @@ What the adapters in `src/worker/channels/` rely on, checked against each provid
 - Whether Twilio accepts 204 from an incoming message webhook without a 12200 or 12300 warning. Beep Me returns empty TwiML.
 - Twilio media retention: the docs say until deleted, the Help Center says 13 months.
 - Resend error JSON shape (`{ statusCode, message, name }` is not shown in the docs).
-- Gmail API maximum message size.
 - Discord: the maximum number of files per message (the adapter sends at most 10) and the maximum total request size (the adapter keeps the upload at 20 MiB or less, then falls back to links on 413, 40005, or 50045).
 - ntfy: a maximum length for action button labels. Beep Me options are at most 64 characters.
 - Slack: the status code and error text when Slack cannot download an `image_url`. The adapter sends again without image blocks on any 400.
+- Gmail API maximum upload size and accepted media types for `messages.send` (the reference page does not list them).
+- Whether Resend keeps a custom `Message-ID` header. The References anchor carries the Beep Me message id in case Resend replaces it.
+- Plus addressing for Resend inbound. Only the catch-all wording is documented.
+- Whether `headers` on a received email include `in-reply-to` and `references`. The hook falls back to the raw message.
+- How Resend names records for a subdomain (relative to the domain or to the zone). The setup API accepts both.
 - ntfy error JSON shape (`{ code, http, error }` is not shown in the docs).
 - Gmail app password changes in 2026.
 - What `editMessageText` does with the inline keyboard when `reply_markup` is omitted. The adapter sends it again.
