@@ -2,6 +2,13 @@
 
 All notable changes to Beep Me are documented here. Versions follow [Semantic Versioning](https://semver.org/). Commits follow [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/); see [CONTRIBUTING.md](CONTRIBUTING.md#versions) for how they map to releases.
 
+## [0.5.1] - 2026-11-19
+
+### Fixed
+
+- **copy:** split two-step instructions and use active voice in setup screens and the CLI ([4f5812a](https://github.com/yannelli/beep-me/commit/4f5812adf2f0ff643ed1698f3438d6f52636de51))
+- **dashboard:** keep the 409 preview in API errors and drop the Resend fetch helper ([b35e1d6](https://github.com/yannelli/beep-me/commit/b35e1d67ba1eb4145e5baa4a5891b6758dc0457d))
+
 ## [0.5.0] - 2026-11-19
 
 ### Added
