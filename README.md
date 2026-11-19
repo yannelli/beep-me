@@ -11,15 +11,33 @@
   <a href="https://workers.cloudflare.com/"><img alt="Runs on Cloudflare Workers" src="https://img.shields.io/badge/Cloudflare-Workers-F38020?logo=cloudflare&logoColor=white"></a>
 </p>
 
-Beep Me lets every AI agent you run send you a message: a text, a Telegram message, an email, a Slack or Discord post, or a phone push. It is one remote MCP (Model Context Protocol) server on Cloudflare Workers. You set it up and manage it from your phone.
+Beep Me lets every AI agent you run message you and read your answer. Messages go out as a text, a Telegram message, an email, a Slack or Discord post, or a phone push. Beep Me is one remote MCP (Model Context Protocol) server on Cloudflare Workers. You set it up and manage it from your phone.
 
 - All agents use one URL. This includes Claude on the web, desktop, and mobile, Claude Code, and other MCP clients. Scripts, cron jobs, and continuous integration (CI) use a REST endpoint.
+- Agents can ask you a question with choices, or ask for a written answer, and read what you sent back with the `get_replies` tool or `GET /v1/replies`. They can attach screenshots, logs, and other files, and set a sender name such as a project name.
 - You sign in with Google, so there is no password to manage. The dashboard works on a phone, and you can add it to your home screen.
-- You connect your own accounts and keys. Beep Me sends through Telegram, Twilio SMS, Telnyx SMS, Resend, Gmail, SMTP, Slack, Discord, ntfy, Pushover, and webhooks. Telegram has a main chat and a thread for each topic. Each channel has a Test button.
-- Priority decides where a message goes. High and urgent go out as a text message (SMS), medium goes to your Telegram chat, and low goes to the topic's thread. A new topic gets its own thread the first time an agent uses it.
+- You connect your own accounts and keys. Beep Me sends through Telegram, Twilio and Telnyx text messages (SMS and MMS), Resend, Gmail, SMTP, Slack, Discord, ntfy, Pushover, and webhooks. Telegram has a main chat and a thread for each topic. Each channel has a Test button.
+- Priority decides where a message goes. High and urgent go out as a text message, medium goes to your Telegram chat, and low goes to the topic's thread. A new topic gets its own thread the first time an agent uses it.
 - Rules route or mute messages by priority, topic, and agent. During quiet hours, Beep Me skips texts and delivers without sound. Urgent messages still break through. Each agent has a text cap and a message cap. Beep Me collapses repeated messages into one message.
 - For each agent, you pick the channels it can use and the highest priority it can send. When you revoke an agent from your phone, its next call fails.
-- The delivery log shows which agent sent each message, where it went, and whether it arrived. Text messages include the provider's delivery receipt.
+- The delivery log shows which agent sent each message, where it went, and whether it arrived. Text messages include the provider's delivery receipt. Open a message to see its answers and files.
+
+### Where you can answer
+
+| Where | How |
+| --- | --- |
+| Telegram | Tap a choice button, reply to the message, or send text, a photo, a file, or a voice note. Emoji reactions count too. |
+| Text message (Telnyx, Twilio) | Text back a choice's number or text, or just write an answer. Photos come through as files. |
+| Email (Resend) | Each agent sends from its own address on your domain. Reply to the email to answer. |
+| ntfy | Tap a choice button, for questions with up to 3 options. |
+| Dashboard | Open the message and pick a choice or write an answer. Slack, Discord, Pushover, Gmail, and SMTP messages link to it. |
+
+### Guided setup in the dashboard
+
+- **Telnyx:** paste an API key and Beep Me lists your numbers. The setup panel checks the messaging profile, the reply webhook, the public key, and US registration (10DLC brand and campaign, or toll-free verification). It can create a profile, send replies to Beep Me, and assign the number to one of your 10DLC campaigns.
+- **Resend:** pick a domain you already have in Resend or add a new one. Beep Me shows the DNS records to add, as a zone file when Cloudflare serves the domain. It can turn on receiving and create the reply webhook.
+
+Nothing changes in your Telnyx or Resend account until you confirm it. Beep Me shows you each change first.
 
 ## Deploy in about 3 minutes
 
@@ -42,7 +60,7 @@ The setup script shows each step before it changes anything. It does these steps
 
 Run `bun run setup --dry-run` to see the plan first. In CI or from an agent, pass the inputs as flags: `bun run setup --yes --account-id <id> --emails you@example.com`. Missing inputs exit with code 2.
 
-Manage the deployment with `bun run cli`: a menu, or commands such as `status`, `agents revoke <id>`, `pause 60`, `domain`, and `teardown`. Each deployment documents the CLI at `/docs/reference/cli`.
+Manage the deployment with `bun run cli`. With no command it opens a menu. The commands are `status`, `agents`, `channels`, `messages`, `pause`, `resume`, `emails`, `google`, `domain`, `deploy`, `logs`, `open`, `connect`, and `teardown`. `bun run cli domain` moves Beep Me to a hostname in one of your Cloudflare zones, adds alias hostnames, or goes back to `workers.dev`. Pass `--yes` to run a command without questions, or `--dry-run` to print each change first. `bun run cli <command> --help` shows the flags of one command. Each deployment documents the CLI at `/docs/reference/cli`.
 
 Then do these steps on your phone:
 
@@ -107,14 +125,23 @@ curl -X POST https://<your-worker>/v1/notify \
 # Plain text works too. Put the options in headers.
 curl -d "Deploy finished" -H "Authorization: Bearer $BEEPME_TOKEN" \
   -H "X-Priority: medium" -H "X-Topic: api" https://<your-worker>/v1/notify
+
+# Ask a question, then wait up to 30 seconds for the answer.
+curl -X POST https://<your-worker>/v1/notify \
+  -H "Authorization: Bearer $BEEPME_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"message":"Ship the redesign?","priority":"high","options":["Ship it","Wait until Monday"]}'
+curl "https://<your-worker>/v1/replies?message_id=<id>&wait_seconds=30" \
+  -H "Authorization: Bearer $BEEPME_TOKEN"
 ```
 
 ## MCP tools
 
 | Tool | What it does |
 | --- | --- |
-| `notify` | Sends a message. Inputs: `message`, `title`, `priority` (`low`, `medium`, `high`, `urgent`), `topic`, `url`, `dedupe_key`. Returns the channels that got the message, and the routing notes. |
+| `notify` | Sends a message. Inputs: `message`, `title`, `priority` (`low`, `medium`, `high`, `urgent`), `topic`, `url`, `dedupe_key`, `attachments` (up to 10 files), `options` (2 to 10 choices), `expect_reply`, `sender_name`. Returns the message ID, the channels that got the message, and the routing notes. |
 | `notification_status` | Shows the status of a message from this agent, with the SMS delivery receipts. |
+| `get_replies` | Returns what you sent back: text replies, choices, reactions, and files. Inputs: `message_id`, `since`, `wait_seconds` (up to 50), `include_read`, `limit`. Marks the answers read. |
 
 The prompt `notify-when-done` tells the agent to send a message when the current task finishes or gets stuck. The server instructions tell agents when to notify and how to pick a priority.
 
@@ -160,10 +187,13 @@ On localhost, **Continue as developer** signs you in without Google. On localhos
 src/shared/     Types and schemas shared by the Worker and the dashboard
 src/worker/     The Worker: MCP server, OAuth, routing, channels, JSON API
   channels/     One adapter per provider
-  core/         Routing, quiet hours, delivery, the notify pipeline
+  core/         Routing, quiet hours, delivery, replies, the notify pipeline
+  hooks/        Incoming replies, choices, and delivery receipts from providers
+  integrations/ Guided Telnyx and Resend setup
   auth/         Google sign-in, sessions, the OAuth approval page
 src/web/        The dashboard (React 19, Tailwind CSS 4)
   docs/         The docs site at /docs: nav.ts, MDX pages in content/, components
+scripts/cli/    The setup and management CLI (bun run cli)
 migrations/     D1 schema
 docs/           API reference and research notes (start at docs/INDEX.md)
 ```
@@ -174,7 +204,8 @@ docs/           API reference and research notes (start at docs/INDEX.md)
 - Beep Me stores agent tokens as SHA-256 hashes and shows each token once.
 - Beep Me uses OAuth 2.1 with PKCE, an approval page for each client, Client ID Metadata Documents, and dynamic client registration.
 - Beep Me checks the agent in D1 on every call, so a revoke takes effect on the next request.
-- The Telegram webhook checks a secret for each channel. SMS receipt URLs carry an HMAC.
+- The Telegram webhook checks a secret for each channel. SMS receipt URLs and ntfy choice buttons carry an HMAC.
+- Text replies must carry a valid signature: Ed25519 with your Telnyx public key, or `X-Twilio-Signature` with your Twilio auth token. Resend replies must carry a valid Svix signature. Beep Me records email replies only from the channel's **Send to** address.
 - If an SMTP server does not offer STARTTLS, Beep Me does not send your password to it.
 
 ## Status
