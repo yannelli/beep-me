@@ -64,9 +64,9 @@ function main() {
   const pkg = JSON.parse(readFileSync("package.json", "utf8"));
   const repoUrl = String(pkg.repository?.url ?? "").replace(/^git\+/, "").replace(/\.git$/, "");
   if (!dryRun) {
-    if (git("rev-parse", "--abbrev-ref", "HEAD") !== "main") throw new Error("Release from the main branch.");
     if (git("status", "--porcelain")) throw new Error("Commit or stash your changes first.");
     git("fetch", "--tags", "origin");
+    if (git("rev-parse", "HEAD") !== git("rev-parse", "origin/main")) throw new Error("Release from an up-to-date checkout of origin/main.");
   }
   const tags = git("tag", "--list", "v*", "--sort=-v:refname").split("\n").filter((tag) => stableTag.test(tag));
   const latest = tags[0] ?? null;
@@ -88,7 +88,7 @@ function main() {
   git("add", "package.json", "CHANGELOG.md");
   git("commit", "-m", `chore(release): v${version}`);
   git("tag", "-a", `v${version}`, "-m", `v${version}`);
-  git("push", "origin", "main", `v${version}`);
+  git("push", "origin", "HEAD:main", `v${version}`);
   run("gh", ["release", "create", `v${version}`, "--title", `v${version}`, "--notes", section.split("\n").slice(2).join("\n")]);
   console.log(`Released v${version}.`);
 }

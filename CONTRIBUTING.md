@@ -57,7 +57,7 @@ The compatibility surface includes the MCP tools and their fields, the REST API,
 
 ## Releases
 
-The maintainer releases from a clean, up-to-date `main` checkout:
+The maintainer releases from a clean checkout of the latest `origin/main` (any branch or worktree):
 
 ```sh
 bun run release --dry-run     # show the next version and notes
