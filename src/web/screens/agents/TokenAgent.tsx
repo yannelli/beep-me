@@ -1,5 +1,5 @@
 import { TriangleAlert } from "lucide-react";
-import { useState, type FormEvent } from "react";
+import { useState, type FormEvent, type ReactNode } from "react";
 import type { AgentDTO, MeResponse } from "../../../shared/api";
 import type { Priority } from "../../../shared/priority";
 import { CopyField, FieldGroup, TextField } from "../../components/form";
@@ -41,7 +41,16 @@ export function TokenReveal({ token }: { token: string }) {
   );
 }
 
-export function TokenAgentForm({ token, onToken }: { token: string | null; onToken: (token: string) => void }) {
+interface TokenAgentFormProps {
+  token: string | null;
+  onToken: (token: string) => void;
+  intro?: string;
+  namePlaceholder?: string;
+  /** What to show after Beep Me creates the token. Defaults to the curl and Claude Code commands. */
+  reveal?: (token: string) => ReactNode;
+}
+
+export function TokenAgentForm({ token, onToken, intro = copy.agents.tokenIntro, namePlaceholder = "GitHub Actions", reveal }: TokenAgentFormProps) {
   const [name, setName] = useState("");
   const [maxPriority, setMaxPriority] = useState<Priority>("high");
   const [channelIds, setChannelIds] = useState<string[] | null>(null);
@@ -67,12 +76,12 @@ export function TokenAgentForm({ token, onToken }: { token: string | null; onTok
     }
   }
 
-  if (token) return <TokenReveal token={token} />;
+  if (token) return reveal ? reveal(token) : <TokenReveal token={token} />;
 
   return (
     <form onSubmit={submit} className="space-y-4" noValidate>
-      <p className="text-sm text-muted">{copy.agents.tokenIntro}</p>
-      <TextField label="Name" placeholder="GitHub Actions" value={name} onChange={(event) => setName(event.target.value)} error={errors.name} autoComplete="off" />
+      <p className="text-sm text-muted">{intro}</p>
+      <TextField label="Name" placeholder={namePlaceholder} value={name} onChange={(event) => setName(event.target.value)} error={errors.name} autoComplete="off" />
       <FieldGroup label="Highest priority it can send">
         <PriorityPicker label="Highest priority" value={maxPriority} onChange={setMaxPriority} />
       </FieldGroup>

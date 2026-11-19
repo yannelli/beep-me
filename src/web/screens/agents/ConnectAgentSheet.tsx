@@ -6,13 +6,15 @@ import { Skeleton } from "../../components/ui";
 import { copy } from "../../copy";
 import { Link } from "../../lib/router";
 import { useQuery } from "../../lib/query";
+import { PluginSetup } from "./PluginSetup";
 import { mcpCommand, TokenAgentForm } from "./TokenAgent";
 
-type Tab = "claude" | "code" | "other" | "token";
+type Tab = "claude" | "code" | "plugin" | "other" | "token";
 
 const GUIDES: Record<Tab, string> = {
   claude: "/docs/agents/claude",
   code: "/docs/agents/claude-code",
+  plugin: "/docs/agents/plugin",
   other: "/docs/agents/other-clients",
   token: "/docs/agents/scripts",
 };
@@ -20,6 +22,7 @@ const GUIDES: Record<Tab, string> = {
 const tabs: { value: Tab; label: string }[] = [
   { value: "claude", label: "Claude" },
   { value: "code", label: "Claude Code" },
+  { value: "plugin", label: "Plugin" },
   { value: "other", label: "Other" },
   { value: "token", label: "Scripts" },
 ];
@@ -43,6 +46,7 @@ function Steps({ steps, extras }: { steps: readonly string[]; extras: Record<num
 export function ConnectAgentSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
   const [tab, setTab] = useState<Tab>("claude");
   const [token, setToken] = useState<string | null>(null);
+  const [pluginToken, setPluginToken] = useState<string | null>(null);
   const me = useQuery<MeResponse>("/api/me");
   const mcpUrl = me.data?.mcpUrl ?? "";
   const urlField = me.data ? <CopyField value={mcpUrl} label="MCP URL" /> : <Skeleton className="h-12" />;
@@ -53,6 +57,7 @@ export function ConnectAgentSheet({ open, onClose }: { open: boolean; onClose: (
       onClose={() => {
         onClose();
         setToken(null);
+        setPluginToken(null);
       }}
       title="Connect an agent"
     >
@@ -77,6 +82,7 @@ export function ConnectAgentSheet({ open, onClose }: { open: boolean; onClose: (
         {tab === "code" && (
           <Steps steps={copy.agents.claudeCodeSteps} extras={{ 0: me.data ? <CopyField value={mcpCommand(mcpUrl)} label="command" multiline /> : <Skeleton className="h-12" /> }} />
         )}
+        {tab === "plugin" && <PluginSetup token={pluginToken} onToken={setPluginToken} />}
         {tab === "other" && <Steps steps={copy.agents.otherSteps} extras={{ 0: urlField }} />}
         {tab === "token" && <TokenAgentForm token={token} onToken={setToken} />}
         <Link href={GUIDES[tab]} className="mt-4 inline-flex min-h-11 items-center text-sm font-medium text-accent">
