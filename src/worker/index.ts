@@ -1,7 +1,7 @@
 import { OAuthProvider } from "@cloudflare/workers-oauth-provider";
 import { createApp } from "./app";
 import { renderMessagePage } from "./auth/consent-page";
-import { publicOrigin } from "./auth/session";
+import { isLocalHost, publicOrigin } from "./auth/session";
 import { findAgentByToken } from "./db/agents";
 import { pruneMessages } from "./db/messages";
 import { ensureSchema } from "./db/migrate";
@@ -38,8 +38,20 @@ function providerFor(origin: string): OAuthProvider<Env> {
   return provider;
 }
 
+/** Sends Worker routes on other hosts to PUBLIC_URL; vite.config.ts does the same for pages. /hooks and /v1 callers do not follow redirects. */
+function aliasRedirect(request: Request, env: Env): Response | null {
+  const primary = env.PUBLIC_URL?.trim();
+  if (!primary || isLocalHost(request)) return null;
+  const url = new URL(request.url);
+  const target = new URL(primary);
+  if (url.hostname === target.hostname || /^\/(hooks|v1|media)\//.test(url.pathname)) return null;
+  return Response.redirect(`${target.origin}${url.pathname}${url.search}`, 308);
+}
+
 export default {
   async fetch(request, env, ctx) {
+    const redirect = aliasRedirect(request, env);
+    if (redirect) return redirect;
     if (!env.APP_SECRET || env.APP_SECRET.length < 32) {
       return renderMessagePage("Finish setup", "Set APP_SECRET to a random value of 32 or more characters: bunx wrangler secret put APP_SECRET", 500);
     }

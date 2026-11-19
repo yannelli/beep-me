@@ -135,13 +135,14 @@ curl -d "Hello from localhost" -H "Authorization: Bearer $BEEPME_TOKEN" http://l
 | Command | What it does |
 | --- | --- |
 | `bun run dev` | Runs the Worker and the dashboard on `http://localhost:5173`, with reload on save. |
-| `bun run typecheck` | Type-checks the Worker, the dashboard, and the Vite config. |
+| `bun run typecheck` | Type-checks the Worker, the dashboard, the Vite config, and the CLI. |
 | `bun run types` | Generates `worker-configuration.d.ts`. Run it after you change `wrangler.jsonc`. |
-| `bun run build` | Builds the Worker and the dashboard into `dist/`. |
+| `bun run build` | Builds the Worker and the dashboard into `dist/`, with the values from `.beep-me/deploy.json`. |
 | `bun run preview` | Builds, then serves the build on your computer. |
 | `bun run check:docs` | Checks the docs pages for missing files, unknown components, dashes, and broken links. |
 | `bun run deploy` | Builds and deploys with Wrangler. |
 | `bun run setup` | Runs the guided first deploy. |
+| `bun run cli` | Manages a deployment. See [CLI](/docs/reference/cli). |
 
 ## Project layout
 

@@ -27,7 +27,7 @@ The sign-in page shows **Set up Google sign-in** in place of **Continue with Goo
 3. Run `bunx wrangler secret put GOOGLE_CLIENT_SECRET`.
 4. Run `bun run deploy`. Then reload the page.
 
-You can also run `bun run setup` again. It asks for the allowed emails again. It also asks for the Google client ID and secret when they are missing.
+You can also run `bun run cli google`. It shows the redirect URI and asks for the client ID and secret.
 
 ### Google shows a redirect URI error
 
@@ -37,13 +37,25 @@ The redirect URI in your Google OAuth client does not match the deployment addre
 https://your-beep-me.example/auth/google/callback
 ```
 
-If you use a custom domain, set `PUBLIC_URL` and use that domain in the URI. See [Configuration](/docs/reference/configuration#public_url).
+If you use a custom domain, use that domain in the URI. `bun run cli domain` sets `PUBLIC_URL` for you. See [Configuration](/docs/reference/configuration#public_url).
+
+### Setup stops with "Missing input"
+
+The CLI ran in headless mode, and an input was missing. Headless mode starts when standard input is not a terminal, `CI` is set, or you pass `--yes`. Add the flags that the message lists, or run the command in a terminal without `--yes`. See [Headless use](/docs/reference/cli#headless-use).
+
+### Setup asks for an account ID
+
+Your Cloudflare login has more than one account. Wrangler needs the account ID when it runs without a terminal. Pick the account at the prompt, or pass `--account-id`. Run `bunx wrangler whoami` to list your accounts.
+
+### "already serves the Worker"
+
+The hostname you chose is a custom domain of another Worker. Remove it from that Worker in the Cloudflare dashboard, or choose another hostname.
 
 ### "is not allowed to sign in to this Beep Me"
 
 The page says **Sign-in did not finish** and `you@example.com is not allowed to sign in to this Beep Me.`
 
-Your account is not in `ALLOWED_EMAILS`. Add it to the list in `wrangler.jsonc`, then run `bun run deploy`. If the list is empty, only the first account that signed in can use Beep Me. See [ALLOWED_EMAILS](/docs/reference/configuration#allowed_emails).
+Your account is not in `ALLOWED_EMAILS`. Run `bun run cli emails` to add it. The command deploys the change. If the list is empty, only the first account that signed in can use Beep Me. See [ALLOWED_EMAILS](/docs/reference/configuration#allowed_emails).
 
 ### "This sign-in link expired. Start again from Beep Me."
 

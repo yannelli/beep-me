@@ -31,13 +31,18 @@ bun install
 bun run setup
 ```
 
-The setup script does these steps:
+The setup script shows each step before it changes anything. It does these steps:
 
-1. Signs you in to Cloudflare.
-2. Creates or finds the D1 database and the KV (key-value) namespace. Writes their IDs to `wrangler.jsonc`.
+1. Signs you in to Cloudflare and picks the account.
+2. Creates or finds the D1 database and the KV (key-value) namespace. Saves their IDs in `.beep-me/deploy.json`, which Git ignores.
 3. Asks which Google accounts can sign in.
-4. Builds and deploys the Worker with a new random `APP_SECRET`.
-5. Shows the redirect URI for your Google OAuth client. Saves the client ID and the client secret.
+4. Keeps the `workers.dev` address, or puts Beep Me on a hostname in one of your Cloudflare zones.
+5. Builds and deploys the Worker with a new random `APP_SECRET`.
+6. Shows the redirect URI for your Google OAuth client. Saves the client ID and the client secret.
+
+Run `bun run setup --dry-run` to see the plan first. In CI or from an agent, pass the inputs as flags: `bun run setup --yes --account-id <id> --emails you@example.com`. Missing inputs exit with code 2.
+
+Manage the deployment with `bun run cli`: a menu, or commands such as `status`, `agents revoke <id>`, `pause 60`, `domain`, and `teardown`. Each deployment documents the CLI at `/docs/reference/cli`.
 
 Then do these steps on your phone:
 
@@ -50,8 +55,11 @@ Then do these steps on your phone:
 <summary>Manual setup</summary>
 
 ```sh
-bunx wrangler d1 create beep-me            # copy database_id into wrangler.jsonc
-bunx wrangler kv namespace create beep-me-oauth   # copy id into the OAUTH_KV binding
+bunx wrangler d1 create beep-me                   # note the database_id
+bunx wrangler kv namespace create beep-me-oauth   # note the id
+mkdir -p .beep-me && cat > .beep-me/deploy.json <<'JSON'
+{ "databaseId": "<database_id>", "kvNamespaceId": "<id>", "allowedEmails": "you@example.com" }
+JSON
 bun run deploy
 openssl rand -hex 32 | bunx wrangler secret put APP_SECRET
 ```
@@ -63,7 +71,7 @@ bunx wrangler secret put GOOGLE_CLIENT_ID
 bunx wrangler secret put GOOGLE_CLIENT_SECRET
 ```
 
-Set `ALLOWED_EMAILS` in `wrangler.jsonc` to a comma-separated list of Google accounts. Use `*` to let any account sign up. If the list is empty, only the first account that signs in can use Beep Me.
+`allowedEmails` in `.beep-me/deploy.json` becomes `ALLOWED_EMAILS`: a comma-separated list of Google accounts. Use `*` to let any account sign up. If the list is empty, only the first account that signs in can use Beep Me.
 
 The Worker applies the database schema on the first request. `bunx wrangler d1 migrations apply beep-me --remote` also works.
 </details>
@@ -74,8 +82,8 @@ The Worker applies the database schema on the first request. `bunx wrangler d1 m
 | --- | --- | --- |
 | `APP_SECRET` | secret | 32+ random characters. Encrypts channel keys and signs sessions. |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | secret | Google sign-in, and the Gmail channel. |
-| `ALLOWED_EMAILS` | var | The Google accounts that can sign in. |
-| `PUBLIC_URL` | var, optional | Set it when you serve Beep Me on a custom domain. |
+| `ALLOWED_EMAILS` | var, from `allowedEmails` in `.beep-me/deploy.json` | The Google accounts that can sign in. |
+| `PUBLIC_URL` | var, from `domain` in `.beep-me/deploy.json` | The custom domain. Other hosts redirect to it. `bun run cli domain` sets it. |
 
 ## Connect your agents
 

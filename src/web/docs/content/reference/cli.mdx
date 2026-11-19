@@ -1,0 +1,199 @@
+Use the Beep Me CLI to deploy Beep Me and to manage the deployment from your terminal. It can also move Beep Me to your own domain. Run it from your copy of the repository.
+
+## Commands
+
+| Command | What it does |
+| --- | --- |
+| `bun run setup` | Deploys Beep Me step by step. It is the same as `bun run cli setup`. |
+| `bun run cli` | Opens a menu with every command below. |
+| `bun run cli status` | Shows the account, the addresses, the secret names, and counts of users, agents, channels, and messages. |
+| `bun run cli agents list` | Lists agents with their status, highest priority, and messages in the last 24 hours. |
+| `bun run cli agents mute <id> <minutes>` | Mutes an agent. `0` unmutes it. |
+| `bun run cli agents revoke <id>` | Revokes an agent. Its next request fails. |
+| `bun run cli channels` | Lists channels with their status and last error. Channel keys stay encrypted. |
+| `bun run cli messages` | Shows the latest 20 messages. Use `--limit` for more, up to 500. |
+| `bun run cli pause <minutes>` | Stops all delivery for up to 7 days. |
+| `bun run cli resume` | Ends a pause. |
+| `bun run cli emails` | Changes who can sign in, then deploys. |
+| `bun run cli google` | Replaces the Google sign-in client ID and secret. |
+| `bun run cli domain` | Moves Beep Me to your own hostname, adds aliases, or goes back to `workers.dev`. Then deploys. |
+| `bun run cli deploy` | Builds with your deployment values and deploys. |
+| `bun run cli logs` | Streams live logs from the Worker. |
+| `bun run cli open` | Opens the dashboard in your browser. |
+| `bun run cli connect` | Prints the Claude Code command and the steps for Claude. |
+| `bun run cli teardown` | Deletes the Worker, the D1 database, and the KV namespace. |
+
+Add `--help` to any command to see its flags and examples:
+
+```sh
+bun run cli --help
+bun run cli domain --help
+```
+
+## Guided setup
+
+`bun run setup` does these steps in order. Before each step that creates or changes something, it shows the change and asks you. When a step finds the resource, it says so and skips the step. You can run setup again at any time.
+
+1. Signs you in to Cloudflare with `wrangler login` if needed. If your login has more than one account, it asks which one to use.
+2. Finds or creates the `beep-me` D1 database.
+3. Finds or creates the `beep-me-oauth` KV namespace.
+4. Sets `ALLOWED_EMAILS`, the Google accounts that can sign in. The default is the email in your Git settings. Enter `*` to allow any Google account. Leave it empty to allow only the first account that signs in.
+5. Keeps the `workers.dev` address, or puts Beep Me on a hostname in one of your Cloudflare zones. See [Custom domains](#custom-domains).
+6. Generates `APP_SECRET` when it is missing. Setup does not change a value that is set.
+7. Builds the dashboard and the Worker, then deploys them.
+8. Shows the Google sign-in redirect URI for your address and the Google Cloud link. Then it asks for the client ID and the client secret. It hides the secret as you type it.
+9. Shows the dashboard address and the commands to connect Claude and Claude Code.
+
+To see the plan without a change, run a dry run:
+
+```sh
+bun run setup --dry-run
+```
+
+A dry run reads your account and prints each change and each Wrangler command. It does not create, deploy, or write anything.
+
+### APP_SECRET
+
+`APP_SECRET` encrypts each stored channel key and signs each session. Setup does not replace it unless you add `--rotate-app-secret` and type `rotate`. After a rotation, Beep Me cannot read the stored channel keys, and everyone must sign in again.
+
+### Deployment record
+
+At the end, setup offers to save a Markdown record of the deployment. The record contains the secrets that setup made or received in that run. Setup writes the file with mode 600. To choose the path in advance, use `--record`:
+
+```sh
+bun run setup --record ~/Documents/beep-me-deployment.md
+```
+
+## Deployment values
+
+Setup keeps the values for your deployment in `.beep-me/deploy.json`. Git ignores this file, so `wrangler.jsonc` stays the same for everyone who clones the repository.
+
+```json title=".beep-me/deploy.json"
+{
+  "accountId": "0123456789abcdef0123456789abcdef",
+  "databaseId": "11111111-2222-3333-4444-555555555555",
+  "kvNamespaceId": "abcdefabcdefabcdefabcdefabcdef12",
+  "allowedEmails": "you@example.com",
+  "domain": "beep.example.com",
+  "aliases": ["notify.example.com"],
+  "workersDev": true
+}
+```
+
+| Key | Becomes |
+| --- | --- |
+| `accountId` | `account_id` |
+| `databaseId` | `database_id` of the `DB` binding |
+| `kvNamespaceId` | `id` of the `OAUTH_KV` binding |
+| `allowedEmails` | The `ALLOWED_EMAILS` variable |
+| `domain` | The `PUBLIC_URL` variable, and a custom domain route |
+| `aliases` | More custom domain routes |
+| `workersDev` | `workers_dev` |
+
+`bun run build` and `bun run deploy` read the file. The build writes the merged config to `dist/beep_me/wrangler.json`, and `wrangler deploy` uses it. `bun run dev` does not read the file, so local development keeps its own data and its `localhost` address.
+
+You can edit the file by hand. Then run `bun run deploy`.
+
+## Headless use
+
+The CLI runs without questions when one of these is true:
+
+- Standard input is not a terminal.
+- The `CI` environment variable is set.
+- You pass `--yes` or `--non-interactive`.
+
+In headless mode, flags and environment variables give the input. A change needs `--yes`. A destructive change also needs `--confirm` with the word that the interactive prompt asks for. When an input is missing, the CLI lists each one and exits with code 2.
+
+```sh
+export BEEPME_GOOGLE_CLIENT_SECRET=GOCSPX-example
+bun run setup --yes \
+  --account-id 0123456789abcdef0123456789abcdef \
+  --emails you@example.com \
+  --domain beep.example.com \
+  --google-client-id 123-example.apps.googleusercontent.com
+```
+
+| Flag | Use |
+| --- | --- |
+| `--account-id <id>` | The Cloudflare account. `CLOUDFLARE_ACCOUNT_ID` also works. You must give it when your login has more than one account. |
+| `--emails <list>` | Google accounts that can sign in, comma-separated. |
+| `--domain <host>` | The primary hostname. Use `none` to go back to `workers.dev`. |
+| `--alias <host>` | An extra hostname that redirects to the primary hostname. Repeat the flag for each alias. |
+| `--workers-dev on` or `off` | Keeps or turns off the `workers.dev` address. |
+| `--google-client-id <id>` | The Google client ID. `BEEPME_GOOGLE_CLIENT_ID` also works. Without it, setup skips Google sign-in. |
+| `--google-client-secret <secret>` | The Google client secret. Use `BEEPME_GOOGLE_CLIENT_SECRET` to keep it out of your shell history. |
+| `--rotate-app-secret` | Replaces `APP_SECRET`. Needs `--confirm rotate` in headless mode. |
+| `--record <path>` | Writes the deployment record. |
+| `--confirm <word>` | Allows a destructive change. Repeat it for more than one word. |
+| `--dry-run` | Prints each change and command, and changes nothing. |
+| `--json` | Prints JSON on standard output for `status`, `agents list`, `channels`, `messages`, `open`, and `connect`. |
+| `--local` | Runs `agents`, `channels`, `messages`, `pause`, and `resume` on your local development data. |
+
+The words for `--confirm`:
+
+| Change | Word |
+| --- | --- |
+| `agents revoke <id>` | The agent ID |
+| `teardown` | `beep-me` |
+| `--rotate-app-secret` | `rotate` |
+| Detach every custom domain | `detach` |
+| Replace DNS records that exist for a new hostname | `replace-dns` |
+
+For example, this command revokes an agent from a script:
+
+```sh
+bun run cli agents revoke agt_abc123 --yes --confirm agt_abc123
+```
+
+## Custom domains
+
+Beep Me can serve on a hostname in a zone that your Cloudflare account manages, for example `beep.example.com`. The CLI uses [Workers Custom Domains](https://developers.cloudflare.com/workers/configuration/routing/custom-domains/). On deploy, Cloudflare creates the DNS record and the certificate.
+
+<Steps>
+
+### Choose the hostname
+
+Run `bun run cli domain`. The CLI lists the zones in your account and suggests `beep.` in front of each one. You can also type a hostname. The hostname must be in a zone in the same account.
+
+### Add aliases
+
+Aliases are more hostnames on the same Worker. On an alias, the dashboard and the docs open the same page on the primary hostname. Sign-in, `/mcp`, and `/api` requests get a 308 redirect to the primary hostname. Requests to `/hooks/` and `/v1/` paths do not redirect. Telegram, the text message providers, and most scripts do not follow redirects.
+
+### Choose the workers.dev address
+
+Keep it on or turn it off. When it is on, it also redirects to the primary hostname.
+
+### Deploy
+
+The CLI deploys. In a terminal, Wrangler asks before it replaces DNS records or a custom domain that another Worker uses.
+
+</Steps>
+
+Before the change, the CLI checks two things. It stops if another Worker already uses the hostname. It warns you when the hostname already has DNS records, because the deploy replaces them. A Wrangler login cannot read DNS records, so the CLI uses a public DNS lookup for this check.
+
+To go back to `workers.dev`, run `bun run cli domain` and choose the `workers.dev` address. In headless mode, run `bun run cli domain --yes --domain none --confirm detach`. The CLI detaches the custom domains from the Worker.
+
+### After you change the address
+
+`PUBLIC_URL` changes to the new primary hostname. Do these steps:
+
+1. In Google Cloud, add `https://beep.example.com/auth/google/callback` to the redirect URIs of your OAuth client.
+2. Connect each MCP client again with the new `/mcp` address. Beep Me binds each OAuth token to the address that issued it.
+3. Open each Telegram channel in the dashboard. Select **Save changes**. Beep Me moves the webhook to the new address.
+4. Change scripts that call `/v1/notify` to the new address. The old address continues to work for them.
+
+Agent tokens that start with `beep_` continue to work.
+
+## Next steps
+
+<Cards>
+
+<Card href="/docs/reference/configuration" title="Configuration">
+Every secret, variable, and binding that Beep Me reads.
+</Card>
+
+<Card href="/docs/reference/troubleshooting" title="Troubleshooting">
+Fixes for setup and sign-in problems.
+</Card>
+
+</Cards>

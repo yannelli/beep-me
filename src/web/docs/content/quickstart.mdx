@@ -30,15 +30,15 @@ bun install
 bun run setup
 ```
 
-The script does these steps:
+The script shows each step before it changes anything, and asks you to continue. It does these steps:
 
-1. Signs you in to Cloudflare. It opens a browser when you are not signed in.
-2. Creates or finds the `beep-me` D1 database and the `beep-me-oauth` KV namespace. It writes their IDs to `wrangler.jsonc`.
+1. Signs you in to Cloudflare. It opens a browser when you are not signed in. If your login has more than one account, it asks which one to use.
+2. Finds or creates the `beep-me` D1 database and the `beep-me-oauth` KV namespace. It saves their IDs in `.beep-me/deploy.json`, which Git ignores.
 3. Asks which Google accounts can sign in. The default is the email in your Git settings.
-4. Builds and deploys the Worker with a new random `APP_SECRET`.
-5. Shows the Worker URL, for example `https://beep-me.<your-subdomain>.workers.dev`.
+4. Asks where Beep Me lives. Keep the `workers.dev` address for now. You can [move to your own domain](/docs/reference/cli#custom-domains) later.
+5. Builds and deploys the Worker with a new random `APP_SECRET`.
 
-If the script cannot read the Worker URL, it asks you to paste it.
+To see the plan first, run `bun run setup --dry-run`. For every step and flag, see [CLI](/docs/reference/cli).
 
 ### Create the Google sign-in client
 
@@ -112,7 +112,7 @@ The message arrives on your phone. Open **Activity** in Beep Me to see it with t
 | What you see | What to do |
 | --- | --- |
 | **Finish setup** | `APP_SECRET` is missing. Run `bun run setup` again. |
-| **Set up Google sign-in** | The Google secrets are missing. Run `bun run setup` again. Paste them at the prompts. |
+| **Set up Google sign-in** | The Google secrets are missing. Run `bun run cli google`. Paste them at the prompts. |
 | A redirect URI error from Google | Check that the URI in Google is your Worker URL with `/auth/google/callback` at the end. |
 | `is not allowed to sign in to this Beep Me` | Your email is not in `ALLOWED_EMAILS`. See [Configuration](/docs/reference/configuration#allowed_emails). |
 

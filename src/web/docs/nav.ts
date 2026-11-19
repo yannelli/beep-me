@@ -63,6 +63,7 @@ export const DOC_SECTIONS: DocSection[] = [
     pages: [
       { slug: "reference/mcp", title: "MCP server", description: "The tools, prompt, instructions, and sign-in that Beep Me gives MCP clients." },
       { slug: "reference/rest-api", title: "REST API", description: "Send a notification with one HTTP request." },
+      { slug: "reference/cli", title: "CLI", description: "Deploy, move to your own domain, and manage Beep Me from the terminal." },
       { slug: "reference/configuration", title: "Configuration", description: "Secrets, variables, custom domains, and data retention." },
       { slug: "reference/security", title: "Security", description: "How Beep Me stores keys, signs requests, and cuts off agents." },
       { slug: "reference/troubleshooting", title: "Troubleshooting", description: "Fixes for the problems people hit most." },

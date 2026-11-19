@@ -3,9 +3,11 @@ import mdx from "@mdx-js/rollup";
 import rehypeShiki from "@shikijs/rehype";
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
+import { fileURLToPath } from "node:url";
 import rehypeSlug from "rehype-slug";
 import remarkGfm from "remark-gfm";
 import { defineConfig, type Plugin } from "vite";
+import { applyOverlay, readOverlay } from "./scripts/cli/overlay.ts";
 
 const codeTitle = (meta: string) => {
   const title = /title="([^"]+)"/.exec(meta)?.[1];
@@ -30,6 +32,16 @@ const docsMdx: Plugin = {
   },
 };
 
-export default defineConfig({
-  plugins: [docsMdx, react(), tailwindcss(), cloudflare()],
+/** Assets answer page loads before the Worker runs, so pages on other hosts move to the primary hostname here. */
+function primaryHostRedirect(host: string | undefined): Plugin {
+  const script = `if(!/^(localhost|127\\.0\\.0\\.1|\\[::1\\])$/.test(location.hostname)&&location.hostname!==${JSON.stringify(host)})location.replace("https://${host}"+location.pathname+location.search+location.hash)`;
+  return { name: "beep-me-primary-host", transformIndexHtml: () => (host ? [{ tag: "script", children: script, injectTo: "head-prepend" }] : []) };
+}
+
+/** Builds read the gitignored deploy overlay. Dev skips it, so local D1 and KV state stays under the binding names. */
+export default defineConfig(({ command }) => {
+  const overlay = command === "build" ? readOverlay(fileURLToPath(new URL(".", import.meta.url))) : {};
+  return {
+    plugins: [docsMdx, react(), tailwindcss(), primaryHostRedirect(overlay.domain), cloudflare({ config: (config) => applyOverlay(config, overlay) })],
+  };
 });

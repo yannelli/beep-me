@@ -20,7 +20,7 @@
       "/media/*"
     ]
   },
-  // `bun run setup` creates the database and namespace and adds their ids here.
+  // Deployment ids, emails, and domains live in the gitignored .beep-me/deploy.json. `bun run setup` writes it.
   "d1_databases": [{ "binding": "DB", "database_name": "beep-me", "migrations_dir": "migrations" }],
   "kv_namespaces": [{ "binding": "OAUTH_KV" }],
   "triggers": { "crons": ["*/15 * * * *"] },

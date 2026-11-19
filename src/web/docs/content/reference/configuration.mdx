@@ -1,4 +1,4 @@
-This page lists every secret, variable, and binding that Beep Me reads. It also covers custom domains, the database schema, and how long Beep Me keeps messages.
+This page lists every secret, variable, and binding that Beep Me reads. It also covers deployment values, custom domains, the database schema, and how long Beep Me keeps messages.
 
 ## Secrets
 
@@ -44,14 +44,16 @@ The Gmail channel uses the same client. See [Gmail](/docs/channels/gmail).
 
 ## Variables
 
-Set variables in `vars` in `wrangler.jsonc`. Then deploy again with `bun run deploy`.
+`bun run setup` sets the variables for your deployment in `.beep-me/deploy.json`. Git ignores this file. The build adds its values to the config from `wrangler.jsonc`. After you edit the file, deploy again with `bun run deploy`.
 
-```jsonc title="wrangler.jsonc"
-"vars": {
-  "ALLOWED_EMAILS": "you@example.com",
-  "PUBLIC_URL": "https://beep-me.example.com"
+```json title=".beep-me/deploy.json"
+{
+  "allowedEmails": "you@example.com",
+  "domain": "beep-me.example.com"
 }
 ```
+
+`allowedEmails` becomes `ALLOWED_EMAILS`. `domain` becomes `PUBLIC_URL` with `https://` in front. For every key in the file, see [Deployment values](/docs/reference/cli#deployment-values).
 
 | Name | Required | Purpose |
 | --- | --- | --- |
@@ -67,7 +69,7 @@ Set variables in `vars` in `wrangler.jsonc`. Then deploy again with `bun run dep
 | `*` | Any Google account. Each account gets its own channels, agents, and messages. |
 | Empty | Only the first account that signs in. After that account exists, Beep Me refuses all other accounts. |
 
-`bun run setup` asks for this value and writes it to `wrangler.jsonc`.
+`bun run setup` asks for this value. To change it later, run `bun run cli emails`.
 
 ### PUBLIC_URL
 
@@ -83,18 +85,21 @@ Omit the trailing slash. Beep Me removes it if you add one.
 
 ## Custom domain
 
-1. Add the custom domain to the Worker in Cloudflare. See [Custom Domains](https://developers.cloudflare.com/workers/configuration/routing/custom-domains/) in the Cloudflare docs.
-2. Set `PUBLIC_URL` to the new address, for example `https://beep-me.example.com`.
-3. Run `bun run deploy`.
-4. In Google Cloud, add `https://beep-me.example.com/auth/google/callback` as a redirect URI.
-5. Reconnect each OAuth agent, for example Claude and Claude Code. Beep Me bound their tokens to the old MCP URL.
-6. Open each Telegram channel. Select **Save changes**. Beep Me then sets the webhook to the new address.
+Run `bun run cli domain` to serve Beep Me on a hostname in one of your Cloudflare zones, for example `beep-me.example.com`. The CLI sets `PUBLIC_URL`, adds the hostname as a [Workers Custom Domain](https://developers.cloudflare.com/workers/configuration/routing/custom-domains/), and deploys. Cloudflare creates the DNS record and the certificate. You can also add aliases that redirect to the primary hostname. See [Custom domains](/docs/reference/cli#custom-domains).
+
+After the change, do these steps:
+
+1. In Google Cloud, add `https://beep-me.example.com/auth/google/callback` as a redirect URI.
+2. Reconnect each OAuth agent, for example Claude and Claude Code. Beep Me bound their tokens to the old MCP URL.
+3. Open each Telegram channel. Select **Save changes**. Beep Me then sets the webhook to the new address.
 
 Agent tokens that start with `beep_` continue to work after the change.
 
+When a domain is set, Beep Me moves requests on other hosts to the same path on `PUBLIC_URL`. The Worker answers sign-in, `/mcp`, and `/api` requests with a 308 redirect. The dashboard pages move with a script that the build adds to `index.html`. Requests to `/hooks/` and `/v1/` paths, and requests to `localhost`, stay on their host.
+
 ## Bindings
 
-`bun run setup` creates these resources and writes their IDs to `wrangler.jsonc`.
+`bun run setup` creates these resources and saves their IDs in `.beep-me/deploy.json`. `wrangler.jsonc` has the bindings without IDs.
 
 | Binding | Type | Name | Holds |
 | --- | --- | --- | --- |
