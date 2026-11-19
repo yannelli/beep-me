@@ -2,6 +2,16 @@
 
 All notable changes to Beep Me are documented here. Versions follow [Semantic Versioning](https://semver.org/). Commits follow [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/); see [CONTRIBUTING.md](CONTRIBUTING.md#versions) for how they map to releases.
 
+## [0.2.0] - 2026-11-19
+
+### Added
+
+- **dashboard:** answer questions from the message sheet ([7a96047](https://github.com/yannelli/beep-me/commit/7a96047f648e689704c7492f6601cbd3ea3af718))
+- **cli:** guided setup, headless flags, management commands, and custom domains ([98b43e8](https://github.com/yannelli/beep-me/commit/98b43e8152c56bc763345ff81df88b0c91ec5075))
+- **channels:** send files and choices on Discord, Slack, ntfy, Pushover, and webhooks ([3c769ab](https://github.com/yannelli/beep-me/commit/3c769abe5b8c484436e54acad3d3f3b0288e440e))
+- **core:** let channels set the agent of an inbound reply ([a8547f8](https://github.com/yannelli/beep-me/commit/a8547f8e88133a1d4d8dca73713de74f65c20200))
+- **core:** let agents ask questions, send files, and read replies ([e4382c2](https://github.com/yannelli/beep-me/commit/e4382c2a16ca83b2c35921a10323b032221cb87d))
+
 ## [0.1.0] - 2026-11-18
 
 ### Added
