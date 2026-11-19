@@ -4,6 +4,7 @@ import { adapters } from "../channels/index";
 import type { ChannelAdapter, InboundMedia } from "../channels/types";
 import { getChannel } from "../db/channels";
 import { listInteractionsForAgent, markInteractionsRead, toInteractionDTO, type InteractionRow } from "../db/interactions";
+import { deliveriesFor } from "../db/messages";
 import { pollTelegramForAgent } from "../hooks/telegram";
 import { base64url } from "../lib/crypto";
 import { sendContext } from "./deliver";
@@ -42,6 +43,55 @@ export async function fetchReplies(env: Env, origin: string, agentId: string, qu
   await markInteractionsRead(env.DB, rows.map((row) => row.id));
   await acknowledgeRead(env, rows.filter((row) => row.read_at === null));
   return { replies: rows.map((row) => toInteractionDTO(row, `${origin}/v1/media`)), rows, waitedSeconds: Math.round((Date.now() - started) / 1000) };
+}
+
+export interface AnsweredMessage {
+  message_id: string;
+  title: string | null;
+  topic: string | null;
+  sent_at: string;
+  /** Every channel the message went to, including fallback sends. */
+  sent_to: string[];
+}
+
+/** The messages these answers belong to, with every channel each one went to. */
+export async function answeredMessages(db: D1Database, messageIds: string[]): Promise<Map<string, AnsweredMessage>> {
+  const ids = [...new Set(messageIds)];
+  if (!ids.length) return new Map();
+  const [{ results }, deliveries] = await Promise.all([
+    db
+      .prepare(`SELECT id, title, topic_name, created_at FROM messages WHERE id IN (${ids.map(() => "?").join(", ")})`)
+      .bind(...ids)
+      .all<{ id: string; title: string | null; topic_name: string | null; created_at: number }>(),
+    deliveriesFor(db, ids),
+  ]);
+  const describe = (d: (typeof deliveries)[number]) =>
+    `${d.channel_name} (${d.channel_kind}${d.target === "topic" ? ", topic thread" : ""}${d.reason ? ", fallback" : ""}${d.status === "failed" ? ", failed" : ""})`;
+  return new Map(
+    results.map((row) => [
+      row.id,
+      {
+        message_id: row.id,
+        title: row.title,
+        topic: row.topic_name,
+        sent_at: new Date(row.created_at).toISOString(),
+        sent_to: deliveries.filter((d) => d.message_id === row.id).map(describe),
+      },
+    ]),
+  );
+}
+
+/** Counts unread answers to one message, waiting up to 50 seconds for the first. */
+export async function waitForAnswers(env: Env, origin: string, message: { id: string; agentId: string | null }, waitSeconds: number): Promise<{ count: number; waitedSeconds: number }> {
+  const started = Date.now();
+  const wait = Math.min(Math.max(waitSeconds, 0), 50) * 1000;
+  for (;;) {
+    if (!origin.startsWith("https://") && message.agentId) await pollTelegramForAgent(env, message.agentId);
+    const row = await env.DB.prepare("SELECT COUNT(*) AS count FROM interactions WHERE message_id = ? AND read_at IS NULL").bind(message.id).first<{ count: number }>();
+    const count = row?.count ?? 0;
+    if (count || Date.now() - started + 2000 > wait) return { count, waitedSeconds: Math.round((Date.now() - started) / 1000) };
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+  }
 }
 
 /** Calls each channel's markRead hook, for example a Telegram reaction on the answer. Errors do not fail the read. */

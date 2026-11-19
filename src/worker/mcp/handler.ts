@@ -3,9 +3,14 @@ import type { McpGrantProps } from "../auth/consent";
 import { publicOrigin } from "../auth/session";
 import { getAgent, touchAgent } from "../db/agents";
 import { getUser } from "../db/users";
+import { skillCatalog } from "./guides";
 import { buildServer, type McpSession } from "./server";
 
-const mcp = createMcpHandler((ctx) => buildServer(ctx.authInfo?.extra?.session as McpSession | undefined));
+const mcp = createMcpHandler(async (ctx) => {
+  const server = buildServer(ctx.authInfo?.extra?.session as McpSession | undefined);
+  (await skillCatalog()).attach(server);
+  return server;
+});
 
 type ProviderContext = ExecutionContext & { props?: unknown; auth?: { clientId?: string; scope: string[] } };
 

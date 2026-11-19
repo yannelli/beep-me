@@ -1,8 +1,9 @@
 import { Hono, type Context } from "hono";
 import type { AppEnv } from "../auth/session";
-import { notify, notifyInputSchema } from "../core/notify";
-import { fetchReplies, interactionMedia } from "../core/replies";
-import { findAgentByToken, touchAgent, type Agent } from "../db/agents";
+import { notify, notifyInputSchema, watchUrl } from "../core/notify";
+import { fetchReplies, interactionMedia, waitForAnswers } from "../core/replies";
+import { findAgentByToken, getAgent, touchAgent, type Agent } from "../db/agents";
+import { timingSafeEqual } from "../lib/crypto";
 import { getInteraction } from "../db/interactions";
 import { getUser } from "../db/users";
 import { getRepliesInput } from "../mcp/replies";
@@ -41,6 +42,21 @@ v1Routes.get("/replies", async (c) => {
     limit: parsed.data.limit,
   });
   return c.json({ replies: batch.replies, waited_seconds: batch.waitedSeconds });
+});
+
+/** GET /v1/watch/:message/:signature?wait_seconds reports whether a message has unread answers. It returns no answer text. */
+v1Routes.get("/watch/:messageId/:signature", async (c) => {
+  const { messageId, signature } = c.req.param();
+  const expected = (await watchUrl(c.env, "", messageId)).split("/").pop() ?? "";
+  if (!timingSafeEqual(expected, signature)) return c.json({ error: "This watch URL is not valid." }, 403);
+  const message = await c.env.DB.prepare("SELECT id, agent_id FROM messages WHERE id = ?").bind(messageId).first<{ id: string; agent_id: string | null }>();
+  if (!message) return c.json({ error: "The message was deleted." }, 404);
+  const agent = message.agent_id ? await getAgent(c.env.DB, message.agent_id) : null;
+  if (message.agent_id && agent?.status !== "active") return c.json({ error: "Access for this agent was revoked." }, 401);
+  const wait = Number(c.req.query("wait_seconds") ?? 0);
+  const result = await waitForAnswers(c.env, c.get("origin"), { id: message.id, agentId: message.agent_id }, Number.isFinite(wait) ? wait : 0);
+  c.header("cache-control", "no-store");
+  return c.json({ message_id: message.id, ready: result.count > 0, count: result.count, waited_seconds: result.waitedSeconds });
 });
 
 /** GET /v1/media/:interaction/:index streams a file the user sent back. Only the agent that owns the message can read it. */
