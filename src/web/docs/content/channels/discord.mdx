@@ -41,8 +41,10 @@ Each message is an embed from a sender named "Beep Me":
 - The first line shows the priority and the agent name, for example `🟠 **High** · Claude Code`. The body follows.
 - The color of the embed shows the priority: red for Urgent, orange for High, blue for Medium, gray for Low.
 - The footer shows the agent name and the topic, with the time of the message.
+- The first image shows as the embed image. Beep Me uploads other files with the message, up to 10 files and 20 MiB in total. Files that do not fit, or that Beep Me cannot download, show as links in the embed.
+- When the agent asks a question, the embed lists the choices as `Reply with a number: 1) Ship it  2) Wait` and adds an **Open in Beep Me** link. Discord webhooks do not send answers back to Beep Me.
 
-The title can have 256 characters and the body 4,096. Beep Me shortens longer text. Beep Me turns off mentions, so a message cannot ping `@everyone` or a role.
+The title can have 256 characters and the body 4,096. Beep Me shortens the body first, so the choices and file links stay. Beep Me turns off mentions, so a message cannot ping `@everyone` or a role.
 
 During quiet hours, Beep Me sets Discord's flag that suppresses notifications. The message appears in the channel without a push or desktop notification. See [Discord messages](https://docs.discord.com/developers/resources/message).
 

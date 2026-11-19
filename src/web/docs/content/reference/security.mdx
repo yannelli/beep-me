@@ -73,6 +73,7 @@ The agent's next request gets HTTP 401. To revoke an agent, open it on the [Agen
 | `/api/*` | A signed session cookie, and the same-site check on writes. |
 | `/hooks/telegram/<channel>` | The `X-Telegram-Bot-Api-Secret-Token` header must match the channel's own secret. Beep Me compares the values in constant time. |
 | `/hooks/sms/<delivery>/<signature>` | The signature must be the HMAC of the delivery ID. |
+| `/hooks/ntfy/<channel>/<message>/<choice>/<signature>` | The signature must be the HMAC of the channel, message, and choice. The message must belong to the channel's owner. |
 
 Each check that fails returns HTTP 401 or 403.
 

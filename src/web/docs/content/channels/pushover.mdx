@@ -64,8 +64,10 @@ For Urgent messages, Beep Me tells Pushover to send the alert again every 60 sec
 - The notification title has the agent name and the message title, for example `Claude Code · Deploy failed`.
 - The notification text has a line with the priority, the agent name, and the topic. The title, the body, and the link follow.
 - When the message has a web link of 512 characters or less, Pushover shows it as **Open link**.
+- The first image is attached to the notification when it is 5 MB or less. Pushover takes one image per message. Other files go into the text as links.
+- When the agent asks a question, the text ends with `Reply with a number: 1) Ship it  2) Wait`. The link becomes **Open in Beep Me** in place of **Open link**. Pushover does not send answers back to Beep Me.
 - Pushover shows the time when the agent sent the message.
-- The title can have 250 characters and the text 1,024. Beep Me shortens longer text.
+- The title can have 250 characters and the text 1,024. Beep Me shortens the body first, so the choices and file links stay.
 
 ## Troubleshooting
 

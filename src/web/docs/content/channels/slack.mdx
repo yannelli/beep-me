@@ -41,9 +41,12 @@ The webhook URL works as a password. Anyone with the URL can post to your channe
 
 ## How messages look
 
-Each message has three parts:
+Each message has these parts:
 
 - The title in bold, then the body and an **Open link** link when the message has a link.
+- Up to 5 images, as PNG, JPEG, or GIF from an `https://` address. Slack downloads each image itself. If Slack cannot get an image, Beep Me sends the message again with links in place of the images.
+- A link for each other file.
+- When the agent asks a question, a numbered list of the choices and an **Answer in the Beep Me dashboard** link. Incoming webhooks do not send answers back to Beep Me.
 - A small line with the priority, the agent name, and the topic, for example `🟠 High · Claude Code · #api`.
 - An **Open link** button when the message has a web link.
 

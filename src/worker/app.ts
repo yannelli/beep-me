@@ -14,6 +14,7 @@ import { resendHook } from "./hooks/resend";
 import { smsHook } from "./hooks/sms";
 import { telegramHook } from "./hooks/telegram";
 import { telnyxHook } from "./hooks/telnyx";
+import { ntfyHook } from "./hooks/ntfy";
 import { resendIntegration } from "./integrations/resend";
 import { telnyxIntegration } from "./integrations/telnyx";
 
@@ -31,6 +32,7 @@ export function createApp(): Hono<AppEnv> {
   app.route("/hooks/sms", smsHook);
   app.route("/hooks/telnyx", telnyxHook);
   app.route("/hooks/resend", resendHook);
+  app.route("/hooks/ntfy", ntfyHook);
   app.get("/media/:id/:name", (c) => serveMedia(c.env, c.req.param("id")));
   app.route("/api", publicApi);
 

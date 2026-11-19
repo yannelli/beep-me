@@ -48,7 +48,18 @@ The iPhone app gets instant notifications from a self-hosted server only when th
 - The notification text has a line with the priority, the agent name, and the topic. The title, the body, and the link follow.
 - Beep Me adds the topic as an ntfy tag. Test messages also get the `test_tube` tag.
 - When you tap the notification, ntfy opens the message link. When there is no web link, it opens the message in Beep Me on an `https://` deployment.
-- ntfy allows 4,096 bytes of text. Beep Me shortens longer text.
+- The first image, or the first file when there is no image, is the ntfy attachment. Beep Me sends its address, and the app downloads it. Other files go into the text as links.
+- ntfy allows 4,096 bytes of text. Beep Me shortens the body first, so the choices and file links stay.
+
+## Answer from the notification
+
+When an agent asks a question with 2 or 3 choices, each choice is a button on the notification. Tap one and Beep Me saves the choice. The agent reads it with `get_replies`, and the notification closes.
+
+Each button sends a `POST` to `/hooks/ntfy/<channel>/<message>/<choice>/<signature>` on your Beep Me. The signature is an HMAC of the channel, the message, and the choice, so a changed address gets HTTP 403. A second tap on the same choice does not save a second answer.
+
+ntfy shows at most 3 buttons. With more choices, the text lists them as `Reply with a number: 1) ...`, and one **Open in Beep Me** button opens the message. See [Action buttons](https://docs.ntfy.sh/publish/#action-buttons).
+
+Your phone sends the button request, so your phone must reach your Beep Me address. A local `http://localhost` address works only on the same computer.
 
 Beep Me sets the ntfy priority from the Beep Me priority:
 

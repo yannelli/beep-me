@@ -101,21 +101,37 @@ export interface DiscordEmbed {
   description: string;
   color: number;
   url?: string;
+  image?: { url: string };
   footer: { text: string };
   timestamp: string;
 }
 
-/** Discord markdown embed. Footer is "agent · topic". */
-export function discordEmbed(message: OutboundMessage): DiscordEmbed {
+/** `image` is an `attachment://` name or a public URL. `links` are files that were not uploaded. */
+export interface DiscordFiles {
+  image: string | null;
+  links: { name: string; url: string }[];
+}
+
+/** Discord markdown embed. Footer is "agent · topic". Choices and file links come after the body. */
+export function discordEmbed(message: OutboundMessage, files: DiscordFiles = { image: null, links: [] }): DiscordEmbed {
   const { headline, body } = parts(message);
   const info = PRIORITY_INFO[message.priority];
   const lead = `${message.test ? `${TEST_TAG}${DOT}` : ""}${info.emoji} **${info.label}**${DOT}${senderLabel(message)}`;
   const link = message.url && !isHttpUrl(message.url) ? `\n${message.url}` : "";
+  const choices = optionsText(message);
+  const tail = [
+    ...files.links.map((file) => `\u{1F4CE} [${file.name.replace(/[[\]]/g, "")}](${file.url})`),
+    choices ? `${choices}\n[Open in Beep Me](${message.appUrl})` : "",
+  ]
+    .filter(Boolean)
+    .join("\n");
+  const main = clip(`${lead}\n\n${body}${link}`.trim(), Math.max(4096 - tail.length - 2, 0));
   return {
     title: clip(headline, 256),
-    description: clip(`${lead}\n\n${body}${link}`.trim(), 4096),
+    description: clip(tail ? `${main}\n\n${tail}` : main, 4096),
     color: parseInt(PRIORITY_COLOR[message.priority].slice(1), 16),
     ...(isHttpUrl(message.url) ? { url: message.url } : {}),
+    ...(files.image ? { image: { url: files.image } } : {}),
     footer: { text: clip([senderLabel(message), message.topic?.name].filter(Boolean).join(DOT), 2048) },
     timestamp: new Date(message.createdAt).toISOString(),
   };

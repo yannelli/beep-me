@@ -60,7 +60,13 @@ X-BeepMe-Signature: sha256=<64 hex characters>
   "agent": { "id": "agt_8sN3wY6bHq0JdF5e", "name": "Claude Code" },
   "silent": false,
   "test": false,
-  "createdAt": 1763481599874
+  "createdAt": 1763481599874,
+  "attachments": [
+    { "name": "migration.log", "mime": "text/plain", "size": 18342, "url": "https://beep-me.example.com/media/4EHckw5vElQmceiTixthqN4W7VykKMsr/migration.log" }
+  ],
+  "options": ["Roll back", "Retry"],
+  "expect_reply": true,
+  "sender_name": "API deploys"
 }
 ```
 
@@ -77,6 +83,10 @@ X-BeepMe-Signature: sha256=<64 hex characters>
 | `silent` | boolean | `false` for webhook channels. |
 | `test` | boolean | `true` for the **Test** button. |
 | `createdAt` | number | When Beep Me got the message, in Unix milliseconds. |
+| `attachments` | array | Files from the agent, each with `name`, `mime`, `size` (bytes, or `null` when unknown), and `url`. Uploaded files stay at their `/media/...` URL for 7 days. Empty when there are no files. |
+| `options` | array of strings | The choices the agent offered. Empty when the agent did not ask a question. |
+| `expect_reply` | boolean | `true` when the agent waits for an answer. |
+| `sender_name` | string or null | The display name that the agent set, for example a project name. |
 
 The headers:
 

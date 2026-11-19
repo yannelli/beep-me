@@ -1,6 +1,6 @@
 # Channel provider facts
 
-Created: 2026-11-18. Last updated: 2026-11-18.
+Created: 2026-11-18. Last updated: 2026-11-19.
 
 What the adapters in `src/worker/channels/` rely on, checked against each provider's official docs on 2026-11-18. Shared HTTP rules for all adapters: 10 s timeout, one retry on 429 or 5xx (waits for Retry-After, at most 3 s), no retry after a timeout or network error.
 
@@ -67,6 +67,7 @@ What the adapters in `src/worker/channels/` rely on, checked against each provid
 - Errors are plain text: `invalid_payload` (400), `user_not_found` (400), `action_prohibited` (403), `channel_not_found` (404), `channel_is_archived` (410), `rollup_error` (500), and `no_service`, `no_text` without a documented status.
 - Limits: 1 message per second per channel, then 429 with Retry-After. Section text 3000, 50 blocks, 10 context elements, button url 3000 and text 75.
 - Slack docs say a url button still sends an interaction payload that expects an acknowledgement.
+- Image block (checked 2026-11-19, https://docs.slack.dev/reference/block-kit/blocks/image-block): `{ type: "image", image_url, alt_text, title? }`. `alt_text` is required, max 2000; `image_url` must be publicly hosted, max 3000; `title` is `plain_text`, max 2000. Supported types: png, jpg, jpeg, gif. Incoming webhooks have no file upload, so other files go out as mrkdwn links.
 
 ## Discord webhooks
 
@@ -78,6 +79,8 @@ What the adapters in `src/worker/channels/` rely on, checked against each provid
 - Embed limits: title 256, description 4096, footer 2048, 6000 total. Content 2000.
 - Errors: `{ code, message }`. 429 includes `retry_after` (float seconds) and the Retry-After header. Discord asks clients to stop using a webhook that returned 404.
 - Verify: `GET <webhook URL>` needs no other auth and returns the webhook object.
+- Files (checked 2026-11-19, https://docs.discord.com/developers/reference#uploading-files, https://docs.discord.com/developers/resources/webhook#execute-webhook, https://docs.discord.com/developers/resources/message#attachment-object-attachment-request-structure): `multipart/form-data` with `payload_json` (the JSON body) and `files[n]` parts, each with a `filename` in Content-Disposition. `attachments: [{ id: n, filename }]` in `payload_json`, where `id` matches the `n` in `files[n]`. An embed shows an uploaded image with `image.url = "attachment://<filename>"`.
+- Upload limit: 20 MiB per file by default, higher with Nitro or server boosts. Error codes: 40005 (request entity too large), 50045 (file over the maximum size). The adapter sends the message again with links on 413, 40005, or 50045.
 
 ## ntfy
 
@@ -85,6 +88,9 @@ What the adapters in `src/worker/channels/` rely on, checked against each provid
 - JSON publish: `POST <server root>` with `{ topic, title, message, priority (1-5), tags, click }`. Auth: `Authorization: Bearer tk_...`.
 - Limits: message 4096 bytes by default (larger messages become attachments), title 1 KB, all tags 512 bytes (400 over either). Default rate limit: 60 requests per visitor, refilling 1 every 5 s.
 - The adapter sends the tag `test_tube` on test messages and the topic key as a tag.
+- Checked 2026-11-19 against https://docs.ntfy.sh/publish/ (source: https://github.com/binwiederhier/ntfy/blob/main/docs/publish.md).
+- Attachment by URL: JSON fields `attach` (URL) and `filename`. The file is hosted elsewhere, so ntfy's attachment size and expiry limits (15 MB per file on ntfy.sh) do not apply. One attachment per message.
+- Action buttons: "up to three user actions" per message, JSON `actions` array. `view` takes `label`, `url`, `clear`. `http` takes `label`, `url`, `method` (default `POST`), `headers`, `body`, `clear`; with `clear: true` the notification closes only when the request succeeds. Action buttons and `http` actions work on Android, iOS, and the web app. The phone sends the `http` request.
 
 ## Pushover
 
@@ -94,10 +100,11 @@ What the adapters in `src/worker/channels/` rely on, checked against each provid
 - Limits: message 1024, title 250, url 512, url_title 100. Over the monthly quota returns 429. At most 2 concurrent connections.
 - Errors: `status` other than 1, with an `errors` array and a `request` id.
 - Verify: `POST /1/users/validate.json` with `token, user, device?`; `status: 1` means a valid user with an active device.
+- Attachments (checked 2026-11-19, https://pushover.net/api#attachments): one image per message, at most 5,242,880 bytes. Send it as a multipart `attachment` part, or as `attachment_base64` with `attachment_type` (MIME type). Base64 makes the request about 35% larger. The adapter uses `attachment_base64`.
 
 ## Generic webhook (Beep Me format)
 
-- `POST <url>` JSON `{ event: "notification", id, title, body, priority, topic, url, agent, silent, test, createdAt }`.
+- `POST <url>` JSON `{ event: "notification", id, title, body, priority, topic, url, agent, silent, test, createdAt, attachments: [{ name, mime, size, url }], options, expect_reply, sender_name }`.
 - Headers: `user-agent: BeepMe/0.1`, `X-BeepMe-Timestamp` (Unix seconds), and with a secret `X-BeepMe-Signature: sha256=<hex HMAC-SHA256(secret, "<timestamp>.<raw body>")>`.
 
 ## Not verified
@@ -108,6 +115,9 @@ What the adapters in `src/worker/channels/` rely on, checked against each provid
 - Telnyx text length limit (the response allows 1 to 25 parts).
 - Resend error JSON shape (`{ statusCode, message, name }` is not shown in the docs).
 - Gmail API maximum message size.
+- Discord: the maximum number of files per message (the adapter sends at most 10) and the maximum total request size (the adapter keeps the upload at 20 MiB or less, then falls back to links on 413, 40005, or 50045).
+- ntfy: a maximum length for action button labels. Beep Me options are at most 64 characters.
+- Slack: the status code and error text when Slack cannot download an `image_url`. The adapter sends again without image blocks on any 400.
 - ntfy error JSON shape (`{ code, http, error }` is not shown in the docs).
 - Gmail app password changes in 2026.
 - What `editMessageText` does with the inline keyboard when `reply_markup` is omitted. The adapter sends it again.

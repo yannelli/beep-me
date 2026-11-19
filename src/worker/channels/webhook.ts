@@ -17,6 +17,10 @@ export const webhook: ChannelAdapter<"webhook"> = {
       silent: message.silent,
       test: message.test,
       createdAt: message.createdAt,
+      attachments: message.attachments.map(({ name, mime, size, url }) => ({ name, mime, size, url })),
+      options: message.options,
+      expect_reply: message.expectReply,
+      sender_name: message.senderName,
     });
     const timestamp = String(Math.floor(Date.now() / 1000));
     const headers: Record<string, string> = {
