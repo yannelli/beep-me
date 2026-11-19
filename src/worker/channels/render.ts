@@ -41,10 +41,15 @@ export function senderLabel(message: OutboundMessage): string {
   return message.senderName ? `${message.senderName} (${message.agent.name})` : message.agent.name;
 }
 
-/** "Reply with a number: 1) Ship it 2) Wait" for channels that cannot show buttons. */
-export function optionsText(message: OutboundMessage): string | null {
-  if (!message.options.length) return message.expectReply ? "Reply to this message to answer." : null;
-  return `Reply with a number: ${message.options.map((option, index) => `${index + 1}) ${option}`).join("  ")}`;
+/** Choices as text for channels without buttons. One-way channels (canReply false) point to the dashboard answer form. */
+export function optionsText(message: OutboundMessage, canReply = true): string | null {
+  const list = message.options.map((option, index) => `${index + 1}) ${option}`).join("  ");
+  if (canReply) {
+    if (!message.options.length) return message.expectReply ? "Reply to this message to answer." : null;
+    return `Reply with a number: ${list}`;
+  }
+  if (!message.options.length) return message.expectReply ? "Answer in Beep Me." : null;
+  return `Choices: ${list}. Answer in Beep Me.`;
 }
 
 /** "🟠 High · agent · #topic", with a test tag on test messages. */
@@ -118,7 +123,7 @@ export function discordEmbed(message: OutboundMessage, files: DiscordFiles = { i
   const info = PRIORITY_INFO[message.priority];
   const lead = `${message.test ? `${TEST_TAG}${DOT}` : ""}${info.emoji} **${info.label}**${DOT}${senderLabel(message)}`;
   const link = message.url && !isHttpUrl(message.url) ? `\n${message.url}` : "";
-  const choices = optionsText(message);
+  const choices = optionsText(message, false);
   const tail = [
     ...files.links.map((file) => `\u{1F4CE} [${file.name.replace(/[[\]]/g, "")}](${file.url})`),
     choices ? `${choices}\n[Open in Beep Me](${message.appUrl})` : "",

@@ -20,7 +20,7 @@ export const pushover: ChannelAdapter<"pushover"> = {
     const image = await loadImage(message.attachments);
     const tail = [
       ...message.attachments.filter((item) => item !== image?.source).map((item) => `${item.name}: ${item.url}`),
-      optionsText(message),
+      optionsText(message, false),
     ]
       .filter(Boolean)
       .join("\n");

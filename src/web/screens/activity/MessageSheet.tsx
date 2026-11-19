@@ -45,7 +45,7 @@ export function MessageSheet({ id, initial, onClose }: { id: string | null; init
               <ExternalLink className="size-4 shrink-0" aria-hidden />
             </a>
           )}
-          <MessageExtras message={message} />
+          <MessageExtras message={message} onAnswered={() => void fresh.refetch()} />
 
           <dl className="rounded-xl border border-line px-3">
             <Row label="Priority">

@@ -19,7 +19,7 @@ export const ntfy: ChannelAdapter<"ntfy"> = {
     const attachment = message.attachments.find((item) => item.kind === "image") ?? message.attachments[0];
     const tail = [
       ...message.attachments.filter((item) => item !== attachment).map((item) => `${item.name}: ${item.url}`),
-      message.options.length > MAX_ACTIONS ? optionsText(message) : null,
+      message.options.length > MAX_ACTIONS ? optionsText(message, false) : null,
     ]
       .filter(Boolean)
       .join("\n");

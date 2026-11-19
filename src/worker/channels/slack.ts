@@ -48,7 +48,7 @@ function isSlackImage(attachment: OutboundAttachment): boolean {
 
 function choicesText(message: OutboundMessage): string {
   const list = message.options.map((option, index) => `${index + 1}. ${escapeSlack(option)}`).join("\n");
-  const note = `${slackLink(message.appUrl, "Answer in the Beep Me dashboard")}.`;
+  const note = `${slackLink(message.appUrl, "Answer in Beep Me")}.`;
   return list ? `${list}\n${note}` : note;
 }
 

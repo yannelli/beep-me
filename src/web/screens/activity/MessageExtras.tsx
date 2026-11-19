@@ -3,6 +3,7 @@ import type { AttachmentDTO, InteractionDTO, InteractionMediaDTO, MessageDTO } f
 import { CHANNEL_CATALOG } from "../../../shared/channel-catalog";
 import { Badge } from "../../components/ui";
 import { dateTime } from "../../lib/format";
+import { AnswerForm } from "./AnswerForm";
 
 function FileLink({ file }: { file: AttachmentDTO | InteractionMediaDTO }) {
   if (file.kind === "image") {
@@ -41,7 +42,7 @@ function Interaction({ item }: { item: InteractionDTO }) {
 }
 
 /** Files, offered choices, and the answers that came back for one message. */
-export function MessageExtras({ message }: { message: MessageDTO }) {
+export function MessageExtras({ message, onAnswered }: { message: MessageDTO; onAnswered: () => void }) {
   return (
     <>
       {message.attachments.length > 0 && (
@@ -80,6 +81,7 @@ export function MessageExtras({ message }: { message: MessageDTO }) {
           )}
         </section>
       )}
+      {(message.options.length > 0 || message.expectReply) && message.deliveries.length > 0 && <AnswerForm message={message} onAnswered={onAnswered} />}
     </>
   );
 }

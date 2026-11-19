@@ -3,6 +3,7 @@ import { z } from "zod";
 import { PRIORITIES } from "../../shared/priority";
 import type { AppEnv } from "../auth/session";
 import { notify } from "../core/notify";
+import { recordInteraction } from "../db/interactions";
 import { getMessage, listMessages } from "../db/messages";
 import { listTopics, setTopicMuted } from "../db/topics";
 import { badRequest, notFound, readJson, runContext, zodFields } from "./util";
@@ -25,6 +26,37 @@ messagesApi.get("/messages", async (c) => {
 messagesApi.get("/messages/:id", async (c) => {
   const message = await getMessage(c.env.DB, c.get("user").id, c.req.param("id"));
   return message ? c.json(message) : notFound(c, "Message not found");
+});
+
+const answerSchema = z
+  .object({ option: z.number().int().min(0).optional(), text: z.string().trim().min(1).max(4000).optional() })
+  .refine((value) => value.option !== undefined || value.text !== undefined, "Pick an option or write an answer.");
+
+/** Answer from the dashboard, for messages on channels that cannot carry a reply (Slack, Discord, Pushover). */
+messagesApi.post("/messages/:id/answer", async (c) => {
+  const user = c.get("user");
+  const parsed = answerSchema.safeParse(await readJson(c));
+  if (!parsed.success) return badRequest(c, "Pick an option or write an answer.", zodFields(parsed.error));
+  const message = await getMessage(c.env.DB, user.id, c.req.param("id"));
+  if (!message) return notFound(c, "Message not found");
+  const { option, text } = parsed.data;
+  if (option !== undefined && option >= message.options.length) return badRequest(c, "That option is not on this message.");
+  const delivery = message.deliveries[0];
+  if (!delivery) return badRequest(c, "Beep Me did not deliver this message, so there is nothing to answer.");
+  await recordInteraction(c.env.DB, {
+    userId: user.id,
+    channelId: delivery.channelId,
+    channelKind: delivery.channelKind,
+    messageId: message.id,
+    kind: option !== undefined ? "choice" : "reply",
+    text: text ?? null,
+    optionIndex: option ?? null,
+    media: [],
+    sender: "Dashboard",
+    providerRef: null,
+  });
+  const updated = await getMessage(c.env.DB, user.id, message.id);
+  return updated ? c.json(updated) : notFound(c, "Message not found");
 });
 
 const testSchema = z.object({ priority: z.enum(PRIORITIES).default("medium"), topic: z.string().trim().max(64).optional() });
