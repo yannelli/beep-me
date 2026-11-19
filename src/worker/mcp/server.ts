@@ -14,6 +14,8 @@ import { registerReplyTools } from "./replies";
 export interface McpSession extends RunContext {
   user: User;
   agent: Agent;
+  /** The client runs the Beep Me plugin (X-Beep-Me-Plugin header), which waits for answers itself. */
+  plugin?: boolean;
 }
 
 export const SERVER_INSTRUCTIONS = `Beep Me sends your notifications to the user's phone, chat apps, and email, and brings their answers back to you.
@@ -55,7 +57,7 @@ export function watchLoop(url: string): string {
   return `W='${url}'; end=$((SECONDS+5400)); while [ $SECONDS -lt $end ]; do r=$(curl -fsS --max-time 70 "$W?wait_seconds=50") && case "$r" in *'"ready":true'*) echo "$r"; exit 0;; esac || sleep 15; done; echo "No answer after 90 minutes."; exit 2`;
 }
 
-function summary(result: z.infer<typeof notifyOutput>, awaitsReply: boolean): string {
+function summary(result: z.infer<typeof notifyOutput>, awaitsReply: boolean, plugin: boolean): string {
   const sent = result.deliveries.filter((d) => d.ok).map((d) => `${d.channel} (${d.kind}${d.target === "topic" ? ", topic thread" : ""})`);
   const failed = result.deliveries.filter((d) => !d.ok).map((d) => `${d.channel}: ${d.detail ?? "failed"}`);
   const lines = [`Message ${result.id}. Status: ${result.status}. Priority: ${result.priority}.${result.topic ? ` Topic: ${result.topic}.` : ""}`];
@@ -63,7 +65,9 @@ function summary(result: z.infer<typeof notifyOutput>, awaitsReply: boolean): st
   if (failed.length) lines.push(`Failed: ${failed.join("; ")}.`);
   for (const step of result.fallbacks) lines.push(`Fallback: if ${step.when.replace("_", " ")} by ${step.due_at}, send to ${step.channels.join(", ")}.`);
   lines.push(...result.notes);
-  if (awaitsReply) {
+  if (awaitsReply && plugin) {
+    lines.push("The Beep Me plugin waits for the answer and sends it to you as a new message. Keep working or end your turn. Do not call get_replies or run a watch loop for this message.");
+  } else if (awaitsReply) {
     lines.push(`Answers can come from any channel above. Read them with get_replies and message_id "${result.id}".`);
     if (result.watch_url) lines.push(`To wait without spending tokens, run this in a background shell. It exits 0 when an answer is ready:\n${watchLoop(result.watch_url)}`);
   }
@@ -105,7 +109,7 @@ export function buildServer(session: McpSession | undefined): McpServer {
       if (!session) throw new Error("Not authenticated");
       const result = await notify(session, session.user, { agent: session.agent, name: session.agent.name, source: "mcp" }, input);
       const awaitsReply = Boolean(input.expect_reply || input.options?.length) && ["delivered", "partial"].includes(result.status);
-      return { content: [{ type: "text", text: summary(result, awaitsReply) }], structuredContent: result };
+      return { content: [{ type: "text", text: summary(result, awaitsReply, session.plugin === true) }], structuredContent: result };
     },
   );
 
