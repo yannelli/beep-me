@@ -2,7 +2,7 @@ import { z } from "zod";
 import type { MessageSource, MessageStatus } from "../../shared/api";
 import type { ChannelKind, ChannelTarget } from "../../shared/channels";
 import { PRIORITIES, PRIORITY_INFO, minPriority, priorityRank, type Priority } from "../../shared/priority";
-import type { UserSettings } from "../../shared/settings";
+import type { FallbackTrigger, UserSettings } from "../../shared/settings";
 import { adapters } from "../channels/index";
 import type { ChannelAdapter, OutboundMessage } from "../channels/types";
 import type { Agent } from "../db/agents";
@@ -20,12 +20,13 @@ import {
 } from "../db/messages";
 import { normalizeTopic, touchTopic, type TopicRef } from "../db/topics";
 import type { User } from "../db/users";
-import { randomId, sha256Hex } from "../lib/crypto";
+import { hmacSign, randomId, sha256Hex } from "../lib/crypto";
 import { deliverAll, sendContext } from "./deliver";
 import { httpUrl, notifyExtrasShape, prepareAttachments } from "./extras";
+import { fireDueNow, scheduleFallbacks } from "./fallbacks";
 import { toOutboundAttachment } from "./media";
 import { formatClock } from "./quiet";
-import { planRoute } from "./routing";
+import { destinationsFor, planRoute } from "./routing";
 
 export const notifyInputShape = {
   message: z.string().trim().min(1).max(4000),
@@ -53,8 +54,17 @@ export interface NotifyResult {
   topic: string | null;
   quiet: boolean;
   repeat_count: number;
-  deliveries: { channel: string; kind: ChannelKind; target: ChannelTarget; ok: boolean; detail: string | null }[];
+  deliveries: { channel: string; channel_id: string; kind: ChannelKind; target: ChannelTarget; ok: boolean; detail: string | null }[];
+  /** Fallback steps waiting for their time. */
+  fallbacks: { id: string; when: FallbackTrigger; after_minutes: number; due_at: string; channels: string[] }[];
+  /** For messages that ask something: GET it to wait for an answer without reading it. */
+  watch_url: string | null;
   notes: string[];
+}
+
+/** Signed URL that reports whether a message has answers. It reveals no answer text. */
+export async function watchUrl(env: Env, origin: string, messageId: string): Promise<string> {
+  return `${origin}/v1/watch/${messageId}/${await hmacSign(env.APP_SECRET, "callback", `watch:${messageId}`)}`;
 }
 
 export interface RunContext {
@@ -125,6 +135,8 @@ export async function notify(run: RunContext, user: User, sender: Sender, input:
     quiet: false,
     repeat_count: 1,
     deliveries: [],
+    fallbacks: [],
+    watch_url: null,
     notes,
     ...extra,
   });
@@ -160,6 +172,8 @@ export async function notify(run: RunContext, user: User, sender: Sender, input:
   }
 
   const channels = await listChannels(env, user.id);
+  const picked = input.channels ? destinationsFor(channels, input.channels, input.topic_thread ? "topic" : "main") : null;
+  if (picked?.unknown.length) notes.push(`Beep Me found no channel named ${picked.unknown.map((ref) => `"${ref}"`).join(", ")}. list_channels shows the names.`);
   const plan = planRoute({
     settings,
     channels,
@@ -168,6 +182,8 @@ export async function notify(run: RunContext, user: User, sender: Sender, input:
     agentId: agent?.id ?? null,
     allowedChannelIds: agent?.channelIds ?? null,
     now,
+    requested: picked?.destinations ?? null,
+    topicThread: input.topic_thread === true && !picked,
   });
   notes.push(...plan.notes);
   if (plan.muted) {
@@ -201,10 +217,35 @@ export async function notify(run: RunContext, user: User, sender: Sender, input:
   notes.push(...deliveryNotes);
   const sent = outcomes.filter((outcome) => outcome.ok).length;
   const status: MessageStatus = sent === 0 ? "failed" : sent === outcomes.length ? "delivered" : "partial";
+  const scheduled = sender.source === "system"
+    ? { rows: [], notes: [] }
+    : await scheduleFallbacks(env.DB, {
+        userId: user.id,
+        messageId: message.id,
+        origin,
+        channels,
+        settingsSteps: settings.fallbacks[priority],
+        agentSteps: input.fallbacks,
+        now,
+      });
+  notes.push(...scheduled.notes);
   await finishMessage(env.DB, message.id, status, notes, plan.quiet);
-  return result(status, {
+  const fired = await fireDueNow(env, scheduled.rows, now);
+  notes.push(...fired.map((detail) => `Fallback: ${detail}`));
+  const finalStatus = fired.length ? ((await getMessage(env.DB, user.id, message.id))?.status ?? status) : status;
+  const due = scheduled.rows.filter((row) => row.due_at > now);
+  if (due.length) notes.push(`${due.length} fallback step${due.length > 1 ? "s" : ""} will run if needed. cancel_fallbacks stops them.`);
+  return result(finalStatus, {
     quiet: plan.quiet,
-    deliveries: outcomes.map((o) => ({ channel: o.channel.name, kind: o.channel.kind, target: o.target, ok: o.ok, detail: o.detail })),
+    deliveries: outcomes.map((o) => ({ channel: o.channel.name, channel_id: o.channel.id, kind: o.channel.kind, target: o.target, ok: o.ok, detail: o.detail })),
+    fallbacks: due.map((row) => ({
+      id: row.id,
+      when: row.trigger_kind,
+      after_minutes: row.after_minutes,
+      due_at: new Date(row.due_at).toISOString(),
+      channels: JSON.parse(row.channel_names) as string[],
+    })),
+    watch_url: message.expectReply ? await watchUrl(env, origin, message.id) : null,
   });
 }
 

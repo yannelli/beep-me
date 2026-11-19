@@ -5,6 +5,7 @@ import { isLocalHost, publicOrigin } from "./auth/session";
 import { findAgentByToken } from "./db/agents";
 import { pruneMessages } from "./db/messages";
 import { ensureSchema } from "./db/migrate";
+import { runDueFallbacks } from "./core/fallbacks";
 import { runUpgradeTasks } from "./core/upgrade-tasks";
 import { handleMcp } from "./mcp/handler";
 
@@ -60,7 +61,9 @@ export default {
     ctx.waitUntil(runUpgradeTasks(env));
     return providerFor(publicOrigin(request, env)).fetch(request, env, ctx);
   },
-  async scheduled(_controller, env, ctx) {
-    ctx.waitUntil(ensureSchema(env.DB).then(() => Promise.all([pruneMessages(env.DB, Date.now() - RETENTION_MS), runUpgradeTasks(env)])));
+  async scheduled(controller, env, ctx) {
+    const prune = new Date(controller.scheduledTime).getUTCMinutes() % 15 === 0;
+    const work = () => Promise.all([runDueFallbacks(env), prune ? pruneMessages(env.DB, Date.now() - RETENTION_MS) : null, runUpgradeTasks(env)]);
+    ctx.waitUntil(ensureSchema(env.DB).then(work));
   },
 } satisfies ExportedHandler<Env>;

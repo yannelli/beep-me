@@ -87,6 +87,8 @@ export interface DeliverOptions {
   agentId: string | null;
   smsPerHour: number;
   fallback: PlannedDelivery[];
+  /** Stored on each delivery, for example "No answer after 5 minutes." */
+  reason?: string;
 }
 
 /** Writes delivery rows (reserving text slots under the cap), sends in parallel, and records each result. */
@@ -117,6 +119,7 @@ export async function deliverAll(
       target: plan.target,
       isSms,
       createdAt: Date.now(),
+      reason: options.reason ?? null,
     };
     if (isSms && !(await reserveSmsDelivery(env.DB, delivery, options.smsPerHour, since))) {
       const replacement = usedFallback ? [] : options.fallback;

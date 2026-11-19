@@ -30,6 +30,30 @@ export interface RouteRequest {
   /** null allows every channel. */
   allowedChannelIds: string[] | null;
   now: number;
+  /** Channels the agent picked for this message. They replace the route when at least one can take it. */
+  requested?: Destination[] | null;
+  /** Send to the topic thread on every destination that has one. */
+  topicThread?: boolean;
+}
+
+/** Matches channel ids, then names (any case), then kinds. A kind picks every channel of that kind. */
+export function destinationsFor(channels: StoredChannel[], refs: string[], target: ChannelTarget): { destinations: Destination[]; unknown: string[] } {
+  const destinations: Destination[] = [];
+  const unknown: string[] = [];
+  for (const ref of refs) {
+    const wanted = ref.trim().toLowerCase();
+    const byId = channels.filter((c) => c.id === ref.trim());
+    const byName = byId.length ? byId : channels.filter((c) => c.name.toLowerCase() === wanted);
+    const found = byName.length ? byName : channels.filter((c) => c.kind === wanted);
+    if (!found.length) unknown.push(ref);
+    for (const channel of found) if (!destinations.some((d) => d.channelId === channel.id)) destinations.push({ channelId: channel.id, target });
+  }
+  return { destinations, unknown };
+}
+
+/** True when quiet hours hold back this priority right now. */
+export function isQuietFor(settings: UserSettings, priority: Priority, now: number): boolean {
+  return isQuietNow(settings.quietHours, settings.timezone, now) && priorityRank(priority) < priorityRank(settings.quietHours.breakthrough);
 }
 
 export function globMatch(pattern: string, value: string): boolean {
@@ -55,7 +79,12 @@ export function matchRule(rules: Rule[], request: Pick<RouteRequest, "priority" 
   );
 }
 
-function resolve(request: RouteRequest, destinations: Destination[], quiet: boolean, allowSms: boolean): PlannedDelivery[] {
+export function resolve(
+  request: Pick<RouteRequest, "channels" | "allowedChannelIds" | "topicKey">,
+  destinations: Destination[],
+  quiet: boolean,
+  allowSms: boolean,
+): PlannedDelivery[] {
   const out: PlannedDelivery[] = [];
   for (const destination of destinations) {
     const channel = request.channels.find((c) => c.id === destination.channelId);
@@ -100,11 +129,22 @@ export function planRoute(request: RouteRequest): RoutePlan {
   if (rule?.action.type === "mute") {
     return { muted: true, deliveries: [], fallback: [], notes: [`The rule "${rule.name}" muted this message.`], quiet: false };
   }
-  const quiet =
-    isQuietNow(settings.quietHours, settings.timezone, request.now) &&
-    priorityRank(priority) < priorityRank(settings.quietHours.breakthrough);
-  const destinations = rule?.action.type === "route" ? rule.action.destinations : effectiveRoutes(settings, request.channels)[priority];
-  if (rule) notes.push(`The rule "${rule.name}" picked the destinations.`);
+  const quiet = isQuietFor(settings, priority, request.now);
+  const requested = request.requested ?? [];
+  const picked = requested.length > 0 && resolve(request, requested, quiet, !quiet).length > 0;
+  if (requested.length) {
+    const skippedPick = quiet && resolve(request, requested, false, true).length > 0;
+    notes.push(
+      picked
+        ? "Sent to the channels the agent picked."
+        : skippedPick
+          ? "Quiet hours: skipped the text message the agent picked. Beep Me used your routes."
+          : "None of the channels the agent picked could take this message. Beep Me used your routes.",
+    );
+  }
+  const routed = rule?.action.type === "route" ? rule.action.destinations : effectiveRoutes(settings, request.channels)[priority];
+  if (rule && !picked) notes.push(`The rule "${rule.name}" picked the destinations.`);
+  const destinations = (picked ? requested : routed).map((d) => (request.topicThread ? { ...d, target: "topic" as const } : d));
   let deliveries = resolve(request, destinations, quiet, !quiet);
   const fallback = fallbackFor(request, quiet);
   const skippedText = quiet && resolve(request, destinations, false, true).some((d) => CHANNEL_CATALOG[d.channel.kind].isSms);

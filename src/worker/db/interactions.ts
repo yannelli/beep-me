@@ -69,6 +69,12 @@ export async function recordInteraction(db: D1Database, input: NewInteraction): 
       input.matchedBy,
     )
     .first<{ id: string; agent_id: string | null }>();
+  if (row && input.messageId) {
+    await db
+      .prepare("UPDATE fallbacks SET status = 'canceled', detail = 'Answered before this step was due.' WHERE message_id = ? AND status = 'pending' AND trigger_kind = 'no_reply'")
+      .bind(input.messageId)
+      .run();
+  }
   return row ? { id: row.id, agentId: row.agent_id } : null;
 }
 

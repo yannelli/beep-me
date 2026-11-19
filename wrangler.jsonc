@@ -23,7 +23,7 @@
   // Deployment ids, emails, and domains live in the gitignored .beep-me/deploy.json. `bun run setup` writes it.
   "d1_databases": [{ "binding": "DB", "database_name": "beep-me", "migrations_dir": "migrations" }],
   "kv_namespaces": [{ "binding": "OAUTH_KV" }],
-  "triggers": { "crons": ["*/15 * * * *"] },
+  "triggers": { "crons": ["* * * * *"] },
   "observability": { "enabled": true },
   "vars": {
     // Comma-separated Google accounts that can sign in. "*" allows any account. Empty allows only the first account that signs in.

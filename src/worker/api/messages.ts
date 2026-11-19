@@ -3,6 +3,7 @@ import { z } from "zod";
 import { PRIORITIES } from "../../shared/priority";
 import type { AppEnv } from "../auth/session";
 import { notify } from "../core/notify";
+import { cancelFallbacks } from "../db/fallbacks";
 import { recordInteraction } from "../db/interactions";
 import { getMessage, listMessages } from "../db/messages";
 import { listTopics, setTopicMuted } from "../db/topics";
@@ -56,6 +57,41 @@ messagesApi.post("/messages/:id/answer", async (c) => {
     sender: "Dashboard",
     providerRef: null,
   });
+  const updated = await getMessage(c.env.DB, user.id, message.id);
+  return updated ? c.json(updated) : notFound(c, "Message not found");
+});
+
+/** "Got it" in the dashboard: a 👍 that counts as an answer, so no-answer fallbacks stop and the agent sees it. */
+messagesApi.post("/messages/:id/ack", async (c) => {
+  const user = c.get("user");
+  const message = await getMessage(c.env.DB, user.id, c.req.param("id"));
+  if (!message) return notFound(c, "Message not found");
+  const delivery = message.deliveries[0];
+  if (delivery) {
+    await recordInteraction(c.env.DB, {
+      userId: user.id,
+      channelId: delivery.channelId,
+      channelKind: delivery.channelKind,
+      messageId: message.id,
+      matchedBy: "dashboard",
+      kind: "reaction",
+      text: "👍",
+      optionIndex: null,
+      media: [],
+      sender: "Dashboard",
+      providerRef: `ack:${message.id}`,
+    });
+  }
+  await cancelFallbacks(c.env.DB, message.id, "You selected Got it in Beep Me.");
+  const updated = await getMessage(c.env.DB, user.id, message.id);
+  return updated ? c.json(updated) : notFound(c, "Message not found");
+});
+
+messagesApi.post("/messages/:id/fallbacks/cancel", async (c) => {
+  const user = c.get("user");
+  const message = await getMessage(c.env.DB, user.id, c.req.param("id"));
+  if (!message) return notFound(c, "Message not found");
+  await cancelFallbacks(c.env.DB, message.id, "You canceled it in Beep Me.");
   const updated = await getMessage(c.env.DB, user.id, message.id);
   return updated ? c.json(updated) : notFound(c, "Message not found");
 });
