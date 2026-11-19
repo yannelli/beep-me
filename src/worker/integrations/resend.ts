@@ -5,7 +5,7 @@ import { notFound, readJson } from "../api/util";
 import type { AppEnv } from "../auth/session";
 import { errorText, isRecord, type HttpResponse } from "../channels/http";
 import { resendRequest, restrictedKeyText } from "../channels/resend-api";
-import { getChannel, saveChannelConfig, type StoredChannel } from "../db/channels";
+import { configStatus, getChannel, saveChannel, saveChannelConfig, type StoredChannel } from "../db/channels";
 import { fullName, lookupZone, zoneFile } from "./resend-dns";
 
 /** Dashboard API for Resend domains and inbound email setup. Mounted at /api/integrations/resend. */
@@ -145,7 +145,9 @@ resendIntegration.post("/:channelId/domains/:domainId/use", async (c) => {
   if (!isDetail(detail)) return upstreamError(c, detail);
   const blocked = await needsConfirm(c, { method: "PATCH", path: `/api/channels/${channel.id}`, body: { domain: detail.name }, summary: `Send each agent's email from its own address on ${detail.name}.` });
   if (blocked) return blocked;
-  await saveChannelConfig(c.env, channel.id, { ...channel.config, domain: detail.name });
+  channel.config = { ...channel.config, domain: detail.name };
+  const status = configStatus("resend", channel.config);
+  await saveChannel(c.env, { ...channel, status: status.status, statusDetail: status.detail });
   return c.json(detail);
 });
 

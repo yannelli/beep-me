@@ -4,7 +4,8 @@ import { EMAIL_ATTACHMENT_BUDGET, sendSmtp } from "./smtp";
 import type { ChannelAdapter, SendContext, SendResult } from "./types";
 
 const TOKEN_URL = "https://oauth2.googleapis.com/token";
-const SEND_URL = "https://gmail.googleapis.com/upload/gmail/v1/users/me/messages/send?uploadType=media";
+const SEND_URL = "https://gmail.googleapis.com/gmail/v1/users/me/messages/send";
+const UPLOAD_URL = "https://gmail.googleapis.com/upload/gmail/v1/users/me/messages/send?uploadType=media";
 const REVOKED = "Google access was revoked. Connect Gmail again.";
 const NOT_CONNECTED = "Gmail is not connected yet. Connect Gmail to send email.";
 const EXPIRY_MARGIN_MS = 60_000;
@@ -25,11 +26,11 @@ export const gmail: ChannelAdapter<"gmail"> = {
     const token = cached ?? (await refreshAccessToken(ctx, config.refreshToken));
     if (typeof token !== "string") return token;
     const raw = utf8(buildMime(config.email, config.to ?? config.email, content, files));
-    let response = await postRaw(token, raw);
+    let response = await postRaw(token, raw, files.length > 0);
     if (response.status === 401 && cached) {
       const fresh = await refreshAccessToken(ctx, config.refreshToken);
       if (typeof fresh !== "string") return fresh;
-      response = await postRaw(fresh, raw);
+      response = await postRaw(fresh, raw, files.length > 0);
     }
     if (!response.ok) return { ok: false, detail: `Gmail ${response.status}: ${errorText(response)}` };
     const id = isRecord(response.json) && typeof response.json.id === "string" ? response.json.id : undefined;
@@ -58,9 +59,16 @@ async function refreshAccessToken(ctx: SendContext<"gmail">, refreshToken: strin
   return json.access_token;
 }
 
-/** Media upload takes the raw RFC 822 message, so files are base64 encoded once. */
-function postRaw(token: string, raw: Uint8Array): Promise<HttpResponse> {
-  return http(SEND_URL, {
+/** Messages with files go through media upload, which takes the raw message, so files are base64 encoded once. */
+function postRaw(token: string, raw: Uint8Array, withFiles: boolean): Promise<HttpResponse> {
+  if (!withFiles) {
+    return http(SEND_URL, {
+      method: "POST",
+      headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
+      body: JSON.stringify({ raw: base64(raw).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "") }),
+    });
+  }
+  return http(UPLOAD_URL, {
     method: "POST",
     headers: { authorization: `Bearer ${token}`, "content-type": "message/rfc822" },
     body: raw,

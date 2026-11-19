@@ -56,19 +56,17 @@ export const channelConfigSchemas = {
     /** Path secret of the inbound URL /hooks/telnyx/<channel>/<token>. */
     webhookToken: z.string().optional(),
   }),
-  resend: z
-    .object({
-      apiKey: z.string().trim().startsWith("re_", "Resend API keys start with re_."),
-      from: optionalText,
-      to: email,
-      /** Each agent sends from and gets replies at its own address on this domain. */
-      domain: domainName,
-      subjectPrefix,
-      webhookSecret: z.string().trim().startsWith("whsec_", "Resend signing secrets start with whsec_.").optional().or(z.literal("").transform(() => undefined)),
-      webhookId: z.string().optional(),
-      apiBase: localApiBase,
-    })
-    .refine((config) => Boolean(config.from || config.domain), { path: ["from"], message: "Enter a From address, or set up an agent domain." }),
+  resend: z.object({
+    apiKey: z.string().trim().startsWith("re_", "Resend API keys start with re_."),
+    from: optionalText,
+    to: email,
+    /** Each agent sends from and gets replies at its own address on this domain. */
+    domain: domainName,
+    subjectPrefix,
+    webhookSecret: z.string().trim().startsWith("whsec_", "Resend signing secrets start with whsec_.").optional().or(z.literal("").transform(() => undefined)),
+    webhookId: z.string().optional(),
+    apiBase: localApiBase,
+  }),
   gmail: z.discriminatedUnion("mode", [
     z.object({
       mode: z.literal("oauth"),

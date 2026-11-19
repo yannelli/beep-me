@@ -5,6 +5,7 @@ import { htmlToText, parseChoice, parseHeaderBlock, stripQuoted } from "../chann
 import { isRecord } from "../channels/http";
 import { base64, utf8 } from "../channels/render-email";
 import { agentTag, emailDomain, messageIdsIn, resendRequest, tagFromAddress } from "../channels/resend-api";
+import { parseAddress } from "../channels/smtp";
 import type { InboundMedia } from "../channels/types";
 import { attachmentKind, safeFileName } from "../core/media";
 import { listAgents } from "../db/agents";
@@ -66,7 +67,7 @@ async function handleReceived(env: Env, channel: StoredChannel, emailId: string,
   const domain = config.domain ?? (config.from ? emailDomain(config.from) : null);
   const recipients = (data.to ?? []).map((address) => address.trim().toLowerCase());
   if (!domain || !recipients.some((address) => emailDomain(address) === domain)) return "other domain";
-  const sender = (data.from ?? "").trim().toLowerCase();
+  const sender = parseAddress(data.from ?? "").email.toLowerCase();
   if (sender !== config.to.toLowerCase()) return "unknown sender";
 
   const response = await resendRequest(config, `/emails/receiving/${encodeURIComponent(emailId)}`);

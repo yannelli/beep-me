@@ -24,6 +24,8 @@ A key with **Sending access** can send email, but Beep Me cannot use it to set u
 
 Open [Channels](/channels). Select **Add channel**. Select **Resend**. Fill in **API key** and **Send to**. If you already have a verified domain and do not want agent addresses, fill in **From** too. Select **Add channel**.
 
+Without **From** or an agent domain, the channel shows **Needs setup** until you pick a domain.
+
 ### Set up the agent domain
 
 Open the channel. In **Domain and replies**, pick a domain that is already in Resend and select **Use**. Or enter a new domain, select a region, and select **Add domain**. Beep Me adds it to Resend with sending and receiving on.
@@ -109,7 +111,7 @@ Beep Me shows Resend errors as `Resend <HTTP status>: <message from Resend>`. Se
 | You see | What to do |
 | --- | --- |
 | "Resend API keys start with re_." | Copy the full key from the API keys page. |
-| "Enter a From address, or set up an agent domain." | Fill in **From**, or fill in **Agent domain**. |
+| "Pick an agent domain under Domain and replies, or enter a From address." | Select **Use** next to a domain in **Domain and replies**, or fill in **From**. |
 | "This Resend API key can only send." | Create a key with **Full access**. Paste it in **API key**. |
 | `Resend 401` and "API key is invalid" | The key was deleted or is not active. Create a new key. Paste it in **API key**. |
 | `Resend 403` and "You can only send testing emails to your own email address" | You send from `onboarding@resend.dev`. Verify a domain. Use it as the agent domain or in **From**. |

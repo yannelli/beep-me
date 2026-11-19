@@ -9,6 +9,7 @@ export const resend: ChannelAdapter<"resend"> = {
 
   async send(ctx, message) {
     const { apiKey, apiBase, to, domain, subjectPrefix, webhookSecret } = ctx.config;
+    if (!domain && !ctx.config.from) return { ok: false, detail: "Pick an agent domain under Domain and replies, or enter a From address." };
     const agentFrom = domain && message.agent.id ? await agentAddress({ id: message.agent.id, name: message.agent.name }, domain) : null;
     const from = agentFrom
       ? displayName(message.senderName ?? message.agent.name, agentFrom)
