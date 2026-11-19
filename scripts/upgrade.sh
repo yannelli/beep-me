@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Updates a Beep Me checkout that has no `bun run upgrade` (v0.1.0 to v0.5.0), then hands off to it.
+# Updates a Beep Me checkout that has no `bun run upgrade` (v0.1.0 to v0.5.1), then hands off to it.
 set -euo pipefail
 
 say() { printf '%s\n' "$*"; }
