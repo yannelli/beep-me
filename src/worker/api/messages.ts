@@ -48,6 +48,7 @@ messagesApi.post("/messages/:id/answer", async (c) => {
     channelId: delivery.channelId,
     channelKind: delivery.channelKind,
     messageId: message.id,
+    matchedBy: "dashboard",
     kind: option !== undefined ? "choice" : "reply",
     text: text ?? null,
     optionIndex: option ?? null,

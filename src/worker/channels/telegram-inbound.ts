@@ -1,3 +1,4 @@
+import type { MatchedBy } from "../../shared/api";
 import type { StoredChannel } from "../db/channels";
 import { findMessageByProviderId, latestMessageForChannel, recordInteraction, type MatchedMessage } from "../db/interactions";
 import { TELEGRAM_CAPTION_LIMIT, TELEGRAM_LIMIT } from "./render";
@@ -13,13 +14,18 @@ function senderName(user?: TgUser, chat?: TgChat): string | null {
 }
 
 /** A reply to a Beep Me message matches that message. Anything else matches the newest message in the same chat or topic thread. */
-async function matchMessage(db: D1Database, channel: StoredChannel, message: TgMessage): Promise<MatchedMessage | null> {
+async function matchMessage(db: D1Database, channel: StoredChannel, message: TgMessage): Promise<{ found: MatchedMessage; by: MatchedBy } | null> {
   const chatId = String(message.chat.id);
   const parent = message.reply_to_message;
   if (parent && !parent.forum_topic_created) {
     const found = await findMessageByProviderId(db, channel.id, `${chatId}:${parent.message_id}`);
-    if (found) return found;
+    if (found) return { found, by: "reply" };
   }
+  const latest = await latestInChat(db, channel, message, chatId);
+  return latest ? { found: latest, by: "latest" } : null;
+}
+
+async function latestInChat(db: D1Database, channel: StoredChannel, message: TgMessage, chatId: string): Promise<MatchedMessage | null> {
   const scope = { since: Date.now() - MATCH_WINDOW_MS, preferAwaiting: true, providerPrefix: `${chatId}:` };
   const threadId = message.is_topic_message ? message.message_thread_id : undefined;
   if (threadId === undefined) return latestMessageForChannel(db, channel.id, { ...scope, target: "main" });
@@ -44,12 +50,13 @@ export async function recordTelegramMessage(env: Env, channel: StoredChannel, me
   const media = inboundMedia(message);
   if (message.from?.is_bot || COMMAND.test(text) || (!text && !media.length)) return;
   const matched = await matchMessage(env.DB, channel, message);
-  const option = matched && text && !media.length ? optionFromText(text, matched.options) : null;
+  const option = matched && text && !media.length ? optionFromText(text, matched.found.options) : null;
   await recordInteraction(env.DB, {
     userId: channel.userId,
     channelId: channel.id,
     channelKind: "telegram",
-    messageId: matched?.messageId ?? null,
+    messageId: matched?.found.messageId ?? null,
+    matchedBy: matched?.by ?? null,
     kind: option === null ? "reply" : "choice",
     text: text || null,
     optionIndex: option,
@@ -70,6 +77,7 @@ export async function recordTelegramChoice(env: Env, channel: StoredChannel, que
     channelId: channel.id,
     channelKind: "telegram",
     messageId,
+    matchedBy: "button",
     kind: "choice",
     text: null,
     optionIndex: index,
@@ -121,6 +129,7 @@ export async function recordTelegramReaction(env: Env, channel: StoredChannel, u
     channelId: channel.id,
     channelKind: "telegram",
     messageId: found.messageId,
+    matchedBy: "reaction",
     kind: "reaction",
     text,
     optionIndex: null,

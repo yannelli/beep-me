@@ -55,9 +55,31 @@ export const routesSchema = z.object({
 }) satisfies z.ZodType<Record<Priority, Destination[]>>;
 export type Routes = z.infer<typeof routesSchema>;
 
+export const FALLBACK_TRIGGERS = ["no_reply", "failed", "unconfirmed"] as const;
+export type FallbackTrigger = (typeof FALLBACK_TRIGGERS)[number];
+
+/** One fallback step. Each step fires at most once, afterMinutes after the first send, and only when its trigger still holds. */
+export const fallbackStepSchema = z.object({
+  id: z.string().min(1).max(40),
+  when: z.enum(FALLBACK_TRIGGERS),
+  afterMinutes: z.number().int().min(0).max(1440),
+  destinations: z.array(destinationSchema).min(1).max(5),
+  /** Send the fallback at this priority, for example urgent to break through quiet hours. null keeps the message's priority. */
+  priority: z.enum(PRIORITIES).nullable().default(null),
+});
+export type FallbackStep = z.infer<typeof fallbackStepSchema>;
+
+const fallbackList = z.array(fallbackStepSchema).max(5);
+export const fallbacksSchema = z.object({ urgent: fallbackList, high: fallbackList, medium: fallbackList, low: fallbackList }) satisfies z.ZodType<
+  Record<Priority, FallbackStep[]>
+>;
+export type Fallbacks = z.infer<typeof fallbacksSchema>;
+
 export const userSettingsSchema = z.object({
   timezone: z.string().min(1),
   routes: routesSchema,
+  /** Steps per priority that send the message again elsewhere when nobody answers or a send fails. */
+  fallbacks: fallbacksSchema,
   /** False until the user edits routes. While false, routes follow the channels the user connects. */
   routesCustomized: z.boolean(),
   rules: z.array(ruleSchema).max(50),
@@ -76,6 +98,7 @@ export function defaultSettings(timezone = "UTC"): UserSettings {
   return {
     timezone,
     routes: { urgent: [], high: [], medium: [], low: [] },
+    fallbacks: { urgent: [], high: [], medium: [], low: [] },
     routesCustomized: false,
     rules: [],
     quietHours: { enabled: false, start: "22:00", end: "07:00", days: [], breakthrough: "urgent" },

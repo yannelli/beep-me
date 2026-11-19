@@ -91,6 +91,7 @@ export async function recordInboundText(env: Env, channel: StoredChannel, inboun
     channelId: channel.id,
     channelKind: channel.kind,
     messageId: message?.messageId ?? null,
+    matchedBy: message ? "latest" : null,
     kind: optionIndex === null ? "reply" : "choice",
     text: text || null,
     optionIndex,

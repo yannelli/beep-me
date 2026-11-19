@@ -1,4 +1,4 @@
-import type { InteractionDTO, InteractionKind } from "../../shared/api";
+import type { InteractionDTO, InteractionKind, MatchedBy } from "../../shared/api";
 import type { ChannelKind } from "../../shared/channels";
 import type { InboundMedia } from "../channels/types";
 import { randomId } from "../lib/crypto";
@@ -18,6 +18,8 @@ export interface NewInteraction {
   sender: string | null;
   /** Provider id of the inbound event. A repeat of the same ref is ignored, so webhook retries are safe. */
   providerRef: string | null;
+  /** How Beep Me tied this answer to its message or agent. null when it is unmatched. */
+  matchedBy: MatchedBy | null;
 }
 
 export interface InteractionRow {
@@ -35,15 +37,17 @@ export interface InteractionRow {
   provider_ref: string | null;
   created_at: number;
   read_at: number | null;
+  matched_by: MatchedBy | null;
   message_options?: string | null;
+  channel_name?: string | null;
 }
 
 /** Stores an inbound reply, choice, reaction, or vote. The owning agent comes from the matched message. */
 export async function recordInteraction(db: D1Database, input: NewInteraction): Promise<{ id: string; agentId: string | null } | null> {
   const row = await db
     .prepare(
-      `INSERT INTO interactions (id, user_id, message_id, agent_id, channel_id, channel_kind, kind, text, option_index, media, sender, provider_ref, created_at)
-       VALUES (?, ?, ?, COALESCE(?, (SELECT agent_id FROM messages WHERE id = ?)), ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `INSERT INTO interactions (id, user_id, message_id, agent_id, channel_id, channel_kind, kind, text, option_index, media, sender, provider_ref, created_at, matched_by)
+       VALUES (?, ?, ?, COALESCE(?, (SELECT agent_id FROM messages WHERE id = ?)), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
        ON CONFLICT (channel_id, provider_ref) DO NOTHING
        RETURNING id, agent_id`,
     )
@@ -62,6 +66,7 @@ export async function recordInteraction(db: D1Database, input: NewInteraction): 
       input.sender?.slice(0, 200) ?? null,
       input.providerRef,
       Date.now(),
+      input.matchedBy,
     )
     .first<{ id: string; agent_id: string | null }>();
   return row ? { id: row.id, agentId: row.agent_id } : null;
@@ -128,7 +133,7 @@ export async function listInteractionsForAgent(db: D1Database, agentId: string, 
   if (query.unreadOnly) where.push("i.read_at IS NULL");
   const { results } = await db
     .prepare(
-      `SELECT i.*, m.options AS message_options FROM interactions i LEFT JOIN messages m ON m.id = i.message_id
+      `SELECT i.*, m.options AS message_options, c.name AS channel_name FROM interactions i LEFT JOIN messages m ON m.id = i.message_id LEFT JOIN channels c ON c.id = i.channel_id
        WHERE ${where.join(" AND ")} ORDER BY i.created_at ASC LIMIT ?`,
     )
     .bind(...values, query.limit)
@@ -152,7 +157,7 @@ export async function interactionsFor(db: D1Database, messageIds: string[]): Pro
   if (!messageIds.length) return [];
   const { results } = await db
     .prepare(
-      `SELECT i.*, m.options AS message_options FROM interactions i LEFT JOIN messages m ON m.id = i.message_id
+      `SELECT i.*, m.options AS message_options, c.name AS channel_name FROM interactions i LEFT JOIN messages m ON m.id = i.message_id LEFT JOIN channels c ON c.id = i.channel_id
        WHERE i.message_id IN (${messageIds.map(() => "?").join(", ")}) ORDER BY i.created_at ASC`,
     )
     .bind(...messageIds)
@@ -170,7 +175,9 @@ export function toInteractionDTO(row: InteractionRow, mediaBase = "/api/media"):
     agentId: row.agent_id,
     channelId: row.channel_id,
     channelKind: row.channel_kind,
+    channelName: row.channel_name ?? null,
     kind: row.kind,
+    matchedBy: row.matched_by,
     text: row.text,
     option: row.option_index === null ? null : { index: row.option_index, label: options[row.option_index] ?? `Option ${row.option_index + 1}` },
     media: media.map((item, index) => ({ kind: item.kind, name: item.name, mime: item.mime, size: item.size, url: `${mediaBase}/${row.id}/${index}` })),

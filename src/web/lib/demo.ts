@@ -70,9 +70,9 @@ function message(i: number, agentIndex: number, priority: Priority, title: strin
     topic: null, title, body, url: null, status: "delivered", repeatCount: 1, lastRepeatAt: null, notes: [], quiet: false,
     source: "mcp", createdAt: now - i * 23 * min,
     deliveries: [
-      { id: `d_${i}`, channelId: "ch_telegram", channelKind: "telegram", channelName: "Telegram", target: "main", status: "delivered", detail: null, updatedAt: now - i * 23 * min },
+      { id: `d_${i}`, channelId: "ch_telegram", channelKind: "telegram", channelName: "Telegram", target: "main", status: "delivered", detail: null, reason: null, updatedAt: now - i * 23 * min },
     ],
-    attachments: [], options: [], expectReply: false, senderName: null, interactions: [],
+    attachments: [], options: [], expectReply: false, senderName: null, interactions: [], fallbacks: [],
     ...extra,
   };
 }
@@ -82,8 +82,8 @@ let messages: MessageDTO[] = fresh ? [] : [
   message(0, 0, "urgent", "Production deploy failed", "Migration 0042 timed out on the users table. The deploy is rolled back. I need a decision on whether to retry tonight.", {
     topic: deployTopic,
     deliveries: [
-      { id: "d_a", channelId: "ch_telegram", channelKind: "telegram", channelName: "Telegram", target: "topic", status: "delivered", detail: null, updatedAt: now },
-      { id: "d_b", channelId: "ch_twilio", channelKind: "twilio", channelName: "Phone (SMS)", target: "main", status: "sent", detail: "Twilio SID SM8a1f…", updatedAt: now },
+      { id: "d_a", channelId: "ch_telegram", channelKind: "telegram", channelName: "Telegram", target: "topic", status: "delivered", detail: null, reason: null, updatedAt: now },
+      { id: "d_b", channelId: "ch_twilio", channelKind: "twilio", channelName: "Phone (SMS)", target: "main", status: "sent", detail: "Twilio SID SM8a1f…", reason: null, updatedAt: now },
     ],
   }),
   message(1, 2, "high", "Tests failing on main", "12 of 840 tests fail in packages/billing after the last merge.", { topic: { key: "ci", name: "CI" }, repeatCount: 3, lastRepeatAt: now - 5 * min }),
@@ -93,8 +93,8 @@ let messages: MessageDTO[] = fresh ? [] : [
   message(3, 1, "low", null, "Summary of today's research notes is ready in your Drive."),
   message(4, 2, "high", "Deploy to staging done", "Version 2.14.0 is live on staging.", { topic: deployTopic, status: "partial",
     deliveries: [
-      { id: "d_c", channelId: "ch_telegram", channelKind: "telegram", channelName: "Telegram", target: "topic", status: "delivered", detail: null, updatedAt: now },
-      { id: "d_d", channelId: "ch_gmail", channelKind: "gmail", channelName: "Gmail", target: "main", status: "failed", detail: "invalid_grant: Token has been expired or revoked.", updatedAt: now },
+      { id: "d_c", channelId: "ch_telegram", channelKind: "telegram", channelName: "Telegram", target: "topic", status: "delivered", detail: null, reason: null, updatedAt: now },
+      { id: "d_d", channelId: "ch_gmail", channelKind: "gmail", channelName: "Gmail", target: "main", status: "failed", detail: "invalid_grant: Token has been expired or revoked.", reason: null, updatedAt: now },
     ],
   }),
   message(5, 3, "medium", "Backup complete", "Nightly backup wrote 2.3 GB to R2.", { status: "muted", deliveries: [], notes: ["Agent is muted until 6:00 PM."] }),
@@ -116,6 +116,12 @@ let settings: MeResponse["settings"] = {
     high: [{ channelId: "ch_telegram", target: "topic" }, { channelId: "ch_ntfy", target: "main" }],
     medium: [{ channelId: "ch_telegram", target: "topic" }],
     low: [{ channelId: "ch_telegram", target: "main" }],
+  },
+  fallbacks: fresh ? { urgent: [], high: [], medium: [], low: [] } : {
+    urgent: [{ id: "f_1", when: "no_reply", afterMinutes: 5, destinations: [{ channelId: "ch_twilio", target: "main" }], priority: null }],
+    high: [{ id: "f_2", when: "failed", afterMinutes: 0, destinations: [{ channelId: "ch_ntfy", target: "main" }], priority: null }],
+    medium: [],
+    low: [],
   },
   routesCustomized: false,
   rules: fresh ? [] : [

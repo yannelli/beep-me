@@ -1,6 +1,7 @@
 import type { AttachmentDTO, DeliveryDTO, DeliveryStatus, MessageDTO, MessagePage, MessageSource, MessageStatus } from "../../shared/api";
 import type { ChannelKind, ChannelTarget } from "../../shared/channels";
 import { isPriority, type Priority } from "../../shared/priority";
+import { fallbacksFor, toFallbackDTO, type FallbackRow } from "./fallbacks";
 import { interactionsFor, toInteractionDTO, type InteractionRow } from "./interactions";
 
 export interface NewMessage {
@@ -59,6 +60,14 @@ export async function finishMessage(db: D1Database, id: string, status: MessageS
   await db.prepare("UPDATE messages SET status = ?, notes = ?, quiet = ? WHERE id = ?").bind(status, JSON.stringify(notes), quiet ? 1 : 0, id).run();
 }
 
+/** Adds notes and sets the status after a later send, such as a fallback step. */
+export async function updateMessageAfterSend(db: D1Database, id: string, status: MessageStatus, notes: string[]): Promise<void> {
+  await db
+    .prepare("UPDATE messages SET status = ?, notes = json_insert(notes, '$[#]', ?) WHERE id = ?")
+    .bind(status, notes.join(" "), id)
+    .run();
+}
+
 export async function findCollapseTarget(db: D1Database, userId: string, hash: string, since: number): Promise<string | null> {
   const row = await db
     .prepare(
@@ -96,16 +105,18 @@ export interface NewDelivery {
   target: ChannelTarget;
   isSms: boolean;
   createdAt: number;
+  /** Set on fallback sends, for example "No answer after 5 minutes." */
+  reason?: string | null;
 }
 
-const DELIVERY_COLUMNS = "id, message_id, user_id, agent_id, channel_id, channel_kind, channel_name, target, is_sms, status, created_at, updated_at";
+const DELIVERY_COLUMNS = "id, message_id, user_id, agent_id, channel_id, channel_kind, channel_name, target, is_sms, status, created_at, updated_at, reason";
 
 function deliveryValues(d: NewDelivery): unknown[] {
-  return [d.id, d.messageId, d.userId, d.agentId, d.channelId, d.channelKind, d.channelName, d.target, d.isSms ? 1 : 0, "pending", d.createdAt, d.createdAt];
+  return [d.id, d.messageId, d.userId, d.agentId, d.channelId, d.channelKind, d.channelName, d.target, d.isSms ? 1 : 0, "pending", d.createdAt, d.createdAt, d.reason ?? null];
 }
 
 export async function insertDelivery(db: D1Database, d: NewDelivery): Promise<void> {
-  await db.prepare(`INSERT INTO deliveries (${DELIVERY_COLUMNS}) VALUES (${"?, ".repeat(11)}?)`).bind(...deliveryValues(d)).run();
+  await db.prepare(`INSERT INTO deliveries (${DELIVERY_COLUMNS}) VALUES (${"?, ".repeat(12)}?)`).bind(...deliveryValues(d)).run();
 }
 
 /** Reserves a text-message slot for the agent in one statement. Returns false when the hourly cap is used up. */
@@ -116,7 +127,7 @@ export async function reserveSmsDelivery(db: D1Database, d: NewDelivery, limit: 
   }
   const row = await db
     .prepare(
-      `INSERT INTO deliveries (${DELIVERY_COLUMNS}) SELECT ${"?, ".repeat(11)}?
+      `INSERT INTO deliveries (${DELIVERY_COLUMNS}) SELECT ${"?, ".repeat(12)}?
        WHERE (SELECT COUNT(*) FROM deliveries WHERE agent_id = ? AND is_sms = 1 AND created_at > ?) < ?
        RETURNING id`,
     )
@@ -149,6 +160,7 @@ interface DeliveryRow {
   status: DeliveryStatus;
   provider_id: string | null;
   detail: string | null;
+  reason: string | null;
   updated_at: number;
 }
 
@@ -170,6 +182,7 @@ function toDeliveryDTO(row: DeliveryRow): DeliveryDTO {
     target: row.target,
     status: row.status,
     detail: row.detail,
+    reason: row.reason,
     updatedAt: row.updated_at,
   };
 }
@@ -200,7 +213,7 @@ interface MessageRow {
 
 const FINAL_STATUSES = new Set(["delivered", "partial", "failed", "muted", "throttled", "paused"]);
 
-function toMessageDTO(row: MessageRow, deliveries: DeliveryRow[], interactions: InteractionRow[]): MessageDTO {
+function toMessageDTO(row: MessageRow, deliveries: DeliveryRow[], interactions: InteractionRow[], fallbacks: FallbackRow[]): MessageDTO {
   return {
     id: row.id,
     agentId: row.agent_id,
@@ -224,6 +237,7 @@ function toMessageDTO(row: MessageRow, deliveries: DeliveryRow[], interactions: 
     expectReply: row.expect_reply === 1,
     senderName: row.sender_name,
     interactions: interactions.filter((i) => i.message_id === row.id).map((i) => toInteractionDTO(i)),
+    fallbacks: fallbacks.filter((f) => f.message_id === row.id).map(toFallbackDTO),
   };
 }
 
@@ -255,20 +269,21 @@ export async function listMessages(db: D1Database, userId: string, filters: Mess
     .all<MessageRow>();
   const page = results.slice(0, limit);
   const ids = page.map((row) => row.id);
-  const [deliveries, interactions] = await Promise.all([deliveriesFor(db, ids), interactionsFor(db, ids)]);
+  const [deliveries, interactions, fallbacks] = await Promise.all([deliveriesFor(db, ids), interactionsFor(db, ids), fallbacksFor(db, ids)]);
   const last = page.at(-1);
-  return { items: page.map((row) => toMessageDTO(row, deliveries, interactions)), nextBefore: results.length > limit && last ? last.created_at : null };
+  return { items: page.map((row) => toMessageDTO(row, deliveries, interactions, fallbacks)), nextBefore: results.length > limit && last ? last.created_at : null };
 }
 
 export async function getMessage(db: D1Database, userId: string, id: string): Promise<MessageDTO | null> {
   const row = await db.prepare("SELECT * FROM messages WHERE id = ? AND user_id = ?").bind(id, userId).first<MessageRow>();
   if (!row) return null;
-  const [deliveries, interactions] = await Promise.all([deliveriesFor(db, [id]), interactionsFor(db, [id])]);
-  return toMessageDTO(row, deliveries, interactions);
+  const [deliveries, interactions, fallbacks] = await Promise.all([deliveriesFor(db, [id]), interactionsFor(db, [id]), fallbacksFor(db, [id])]);
+  return toMessageDTO(row, deliveries, interactions, fallbacks);
 }
 
 export async function pruneMessages(db: D1Database, olderThan: number): Promise<void> {
   await db.batch([
+    db.prepare("DELETE FROM fallbacks WHERE created_at < ?").bind(olderThan),
     db.prepare("DELETE FROM deliveries WHERE created_at < ?").bind(olderThan),
     db.prepare("DELETE FROM interactions WHERE created_at < ?").bind(olderThan),
     db.prepare("DELETE FROM messages WHERE created_at < ?").bind(olderThan),

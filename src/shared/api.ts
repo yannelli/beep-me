@@ -1,7 +1,7 @@
 // Dashboard API types. The route table is in docs/api.md.
 import type { ChannelKind, ChannelTarget } from "./channels";
 import type { Priority } from "./priority";
-import type { UserSettings } from "./settings";
+import type { FallbackTrigger, UserSettings } from "./settings";
 
 export interface ApiError {
   error: string;
@@ -155,6 +155,9 @@ export interface AttachmentDTO {
 /** reply: free text. choice: a button or numbered option. reaction: an emoji on the message. vote: a poll answer. */
 export type InteractionKind = "reply" | "choice" | "reaction" | "vote";
 
+/** How Beep Me tied an answer to a message. latest is a guess: the newest message on that chat that waited for an answer. */
+export type MatchedBy = "reply" | "button" | "reaction" | "latest" | "address" | "dashboard";
+
 export interface InteractionMediaDTO {
   kind: AttachmentKind;
   name: string;
@@ -170,7 +173,11 @@ export interface InteractionDTO {
   agentId: string | null;
   channelId: string;
   channelKind: ChannelKind;
+  /** null when the channel was deleted. */
+  channelName: string | null;
   kind: InteractionKind;
+  /** null when Beep Me could not tie the answer to a message. */
+  matchedBy: MatchedBy | null;
   text: string | null;
   option: { index: number; label: string } | null;
   media: InteractionMediaDTO[];
@@ -210,6 +217,25 @@ export interface MessageDTO {
   /** Optional display name the agent set for this message, for example a project name. */
   senderName: string | null;
   interactions: InteractionDTO[];
+  fallbacks: FallbackDTO[];
+}
+
+export type FallbackStatus = "pending" | "sending" | "sent" | "skipped" | "canceled";
+
+export interface FallbackDTO {
+  id: string;
+  when: FallbackTrigger;
+  afterMinutes: number;
+  dueAt: number;
+  status: FallbackStatus;
+  /** Channel names at the time of the send. */
+  channels: string[];
+  priority: Priority | null;
+  /** settings: the user's fallbacks for this priority. agent: the agent set them on this message. */
+  source: "settings" | "agent";
+  /** Why it was sent, skipped, or canceled. */
+  detail: string | null;
+  firedAt: number | null;
 }
 
 export type DeliveryStatus = "pending" | "sent" | "delivered" | "failed";
@@ -222,6 +248,8 @@ export interface DeliveryDTO {
   target: ChannelTarget;
   status: DeliveryStatus;
   detail: string | null;
+  /** Set on fallback sends, for example "No answer after 5 minutes." */
+  reason: string | null;
   updatedAt: number;
 }
 

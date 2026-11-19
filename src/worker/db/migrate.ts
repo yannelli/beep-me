@@ -1,10 +1,12 @@
 import initSql from "../../../migrations/0001_init.sql?raw";
 import interactionsSql from "../../../migrations/0002_interactions.sql?raw";
+import fallbacksSql from "../../../migrations/0003_fallbacks.sql?raw";
 
 /** Each file runs once, in order, when the stored schema version is lower than its number. */
 const MIGRATIONS: { version: number; sql: string }[] = [
   { version: 1, sql: initSql },
   { version: 2, sql: interactionsSql },
+  { version: 3, sql: fallbacksSql },
 ];
 
 let ready: Promise<void> | null = null;

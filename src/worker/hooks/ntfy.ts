@@ -25,6 +25,7 @@ ntfyHook.post("/:channelId/:messageId/:option/:signature", async (c) => {
     channelId,
     channelKind: "ntfy",
     messageId,
+    matchedBy: "button",
     kind: "choice",
     text: null,
     optionIndex: index,
