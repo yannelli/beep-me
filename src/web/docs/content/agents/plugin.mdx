@@ -1,0 +1,218 @@
+The Beep Me plugin adds hooks to Claude Code, Codex, and pi. Claude Code permission prompts, questions, and plans reach your phone, and you answer them there. When an agent asks you something with `notify`, the plugin waits for your answer and gives it to the agent.
+
+## What the plugin does
+
+| Feature | Claude Code | Codex | pi |
+| --- | --- | --- | --- |
+| Answers to `notify` questions come back to the agent | Yes. Your answer starts a new turn, also when the session is idle. | Yes. Codex waits for your answer at the end of the turn. | Yes. Your answer starts a new turn. |
+| Permission prompts go to your phone | Yes, when nobody answers in the terminal | Only when you turn on `BEEPME_PROMPTS` | No. pi has no permission prompts. |
+| Questions from `AskUserQuestion` go to your phone | Yes | No | No |
+| Plans go to your phone for review | Yes | No | No |
+| The Beep Me MCP server | Included | Add it yourself | Included |
+| The agent uses the Beep Me tools without a prompt | Yes | Yes | Yes |
+
+## Before you start
+
+You need [Node.js](https://nodejs.org) 20 or later on your `PATH`. The hooks are Node.js scripts.
+
+You also need an agent token for the plugin:
+
+<Steps>
+
+### Open the Plugin tab
+
+In Beep Me, open [Agents](/agents). Select **Connect**. Select the **Plugin** tab.
+
+### Create the token
+
+Enter a **Name**, for example `Claude Code`. Set the highest priority and the channels. Select **Create token**.
+
+### Copy the commands
+
+The tab shows the commands for Claude Code, Codex, and pi, with your URL and token filled in. Beep Me shows the token only once.
+
+</Steps>
+
+## Install the plugin
+
+<Tabs>
+
+<Tab label="Claude Code">
+
+<Steps>
+
+### Install from the marketplace
+
+Run these commands in a terminal:
+
+```sh
+claude plugin marketplace add yannelli/beep-me
+claude plugin install beep-me@beep-me
+```
+
+### Set the URL and the token
+
+Run this command. Replace the token with yours.
+
+```sh
+echo '{"url":"https://your-beep-me.example/mcp","token":"beep_..."}' | claude plugin configure beep-me@beep-me --values-stdin
+```
+
+Claude Code keeps the token in your system's credential store. You can also set both values in Claude Code: run `/plugin`, select **beep-me**, and configure it.
+
+### Restart Claude Code
+
+Quit Claude Code and start it again. The plugin connects the Beep Me MCP server with your token.
+
+</Steps>
+
+<Callout type="note">
+
+The plugin includes the Beep Me MCP server. If you added Beep Me before with `claude mcp add`, remove that server so the agent does not see two copies of each tool: `claude mcp remove beep-me`.
+
+</Callout>
+
+</Tab>
+
+<Tab label="Codex">
+
+<Steps>
+
+### Set the URL and the token
+
+Add these lines to your shell profile, for example `~/.zshrc`. Then open a new terminal.
+
+```sh
+export BEEPME_URL=https://your-beep-me.example
+export BEEPME_TOKEN=beep_...
+```
+
+### Install from the marketplace
+
+```sh
+codex plugin marketplace add yannelli/beep-me
+codex plugin add beep-me@beep-me
+```
+
+### Add the Beep Me MCP server
+
+```sh
+codex mcp add beep-me --url https://your-beep-me.example/mcp --bearer-token-env-var BEEPME_TOKEN
+```
+
+To get the plugin text in `notify` results, add this line under `[mcp_servers.beep-me]` in `~/.codex/config.toml`:
+
+```toml
+http_headers = { "X-Beep-Me-Plugin" = "1" }
+```
+
+### Trust the hooks
+
+Start Codex and run `/hooks`. Review the Beep Me hooks and trust them. Codex runs plugin hooks only after you trust them, and again after each plugin update.
+
+</Steps>
+
+</Tab>
+
+<Tab label="pi">
+
+<Steps>
+
+### Install from the marketplace
+
+Run this command in pi:
+
+```text
+/claude:plugin install yannelli/beep-me
+```
+
+### Set the URL and the token
+
+pi asks for the values after the install. You can also set them with one command:
+
+```text
+/claude:plugin config beep-me@beep-me url=https://your-beep-me.example/mcp token=beep_...
+```
+
+### Reload pi
+
+Run `/reload`. If pi asks you to trust the Beep Me hooks, trust them.
+
+</Steps>
+
+</Tab>
+
+</Tabs>
+
+## Settings
+
+| Setting | Claude Code and pi option | Codex variable | Default | What it does |
+| --- | --- | --- | --- | --- |
+| URL | `url` | `BEEPME_URL` | None | Your Beep Me MCP URL. The address without `/mcp` also works. |
+| Token | `token` | `BEEPME_TOKEN` | None | The agent token that starts with `beep_`. |
+| Prompts | `prompts` | `BEEPME_PROMPTS` | On in Claude Code, off in Codex | Sends permission prompts, questions, and plans to your phone. Set `BEEPME_PROMPTS=on` to turn it on in Codex. |
+| Ask after | `ask_after` | None | `15` | The seconds a prompt waits for an answer in the terminal before it goes to your phone. `0` sends it at once. |
+| Priority | `priority` | `BEEPME_PRIORITY` | `high` | The [priority](/docs/routing/priorities) of each prompt. Your routes pick the channels. |
+
+When a Claude Code or pi option is not set, the hooks read the `BEEPME_` variable with the same name.
+
+## Answer a prompt on your phone
+
+In Claude Code, the terminal shows each prompt as usual. If nobody answers it within **Ask after** seconds, Beep Me sends it to your phone. The first answer wins, in the terminal or on your phone. When you answer in the terminal, the plugin stops waiting and cancels the message's fallback steps.
+
+| Prompt | Choices | When you write an answer |
+| --- | --- | --- |
+| A command, an edit, a web page, or an MCP tool | **Allow**, **Allow for this session**, **Deny** | Claude does not run it and reads your text. "yes" and "ok" allow it. |
+| A question from `AskUserQuestion` | The options of the question | Your text is the answer. |
+| A plan | **Approve**, **Keep planning** | Claude keeps planning and reads your text as feedback. |
+
+A 👍 reaction allows the request, and a 👎 denies it. **Allow for this session** applies what the Claude Code prompt suggests, such as an allow rule or accept edits mode, for this session only.
+
+Each prompt is a Beep Me message with the project folder as its topic. Your routes, quiet hours, and fallbacks apply. When Claude asks more than one question at once, Beep Me sends them one at a time, so a written answer goes to the right question.
+
+In Codex, with `BEEPME_PROMPTS` on, approval requests go to your phone at once. Codex shows its own approval prompt only after the plugin stops waiting, so you answer on your phone. Press `Esc` in Codex to stop the turn.
+
+## Get answers to notify questions
+
+When an agent calls `notify` with `options` or `expect_reply`, the plugin watches the message. It costs no tokens while it waits.
+
+- **Claude Code and pi**: the agent can keep working or end its turn. Your answer starts a new turn with the answer text, also when the session is idle.
+- **Codex**: the agent ends its turn. Codex then shows "Waiting for your Beep Me answer" and continues the session with your answer as the next prompt. Press `Esc` to stop waiting. After one full wait without an answer, later turns only check for one.
+
+The agent learns this from the plugin when the session starts. With the plugin header, the `notify` result also tells the agent not to run the watch loop. For waiting without the plugin, see [Wait for answers](/docs/agents/waiting).
+
+## Limits
+
+| Wait | Longest time | After that |
+| --- | --- | --- |
+| A Claude Code prompt | 2 hours | The terminal prompt stays open. |
+| A `notify` answer in Claude Code and pi | 3 hours | The agent gets nothing. Read answers later with `get_replies`. |
+| A Codex approval | 30 minutes | Codex shows its own approval prompt. |
+| A `notify` answer in Codex | 60 minutes | The turn ends. |
+
+- When Beep Me holds a prompt because you paused messages, muted the agent, or the agent hit its message cap, the plugin does not wait. The terminal prompt stays open.
+- Each prompt counts toward the agent's message cap. See [Limits and repeats](/docs/routing/limits).
+- The plugin keeps small state files in its plugin data folder and removes them after a week.
+
+## Troubleshooting
+
+| Problem | Fix |
+| --- | --- |
+| The session starts with "Beep Me: add your Beep Me MCP URL and agent token" | Set the URL and the token. Then restart the agent. |
+| Nothing reaches your phone | Run `node --version` and check that it prints 20 or later. Check that the agent is active on the [Agents](/agents) screen. |
+| Every prompt reaches your phone too fast | Raise **Ask after**. |
+| The hooks do not run in Codex | Run `/hooks` and trust the Beep Me hooks. |
+
+## Next steps
+
+<Cards>
+
+<Card href="/docs/agents/waiting" title="Wait for answers">
+Other ways to wait, for agents without the plugin.
+</Card>
+
+<Card href="/docs/routing/fallbacks" title="Fallbacks">
+Send a prompt again on another channel when you do not answer.
+</Card>
+
+</Cards>

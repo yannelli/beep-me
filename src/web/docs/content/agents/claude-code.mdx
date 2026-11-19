@@ -105,6 +105,10 @@ Run the full test suite and fix any failures. Send me a Beep Me notification whe
 
 Beep Me also has the `notify-when-done` prompt. It asks the agent to send a medium message when the task finishes, and a high message if it cannot continue. See [MCP server](/docs/reference/mcp#notify-when-done).
 
+## Answer prompts from your phone
+
+The [Beep Me plugin](/docs/agents/plugin) adds hooks to Claude Code. Permission prompts, questions, and plans go to your phone when you do not answer them in the terminal. Answers to `notify` questions come back to Claude Code without a watch loop. The plugin includes the Beep Me MCP server, so it replaces the `claude mcp add` command on this page.
+
 ## Reconnect or remove Claude Code
 
 If calls start to fail with HTTP 401, run `/mcp` in Claude Code. Sign in again. This happens after you revoke the agent or change the deployment address.

@@ -4,6 +4,7 @@ An agent that asks you something has to wait for the answer. Each `get_replies` 
 
 | Situation | What the agent does |
 | --- | --- |
+| It runs in Claude Code, Codex, or pi with the [Beep Me plugin](/docs/agents/plugin). | Nothing. The plugin waits and gives the agent your answer. |
 | It has other work to do. | It keeps working and calls `get_replies` with `wait_seconds: 0` between steps. |
 | The answer comes in a minute or two, and it is blocked. | It calls `get_replies` with `wait_seconds: 50`, 2 or 3 times at most. |
 | The answer can take a long time, and it has a shell. | It runs the watch loop. The loop costs no tokens while it waits. |

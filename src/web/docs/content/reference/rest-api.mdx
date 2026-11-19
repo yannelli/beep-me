@@ -228,6 +228,21 @@ curl "https://your-beep-me.example/v1/watch/msg_123/<signature>?wait_seconds=50"
 
 The response has no answer text. When `ready` is `true`, read the answer from `/v1/replies`. For a loop that waits up to 90 minutes, see [Wait for answers](/docs/agents/waiting).
 
+## Cancel fallbacks
+
+`POST /v1/messages/<id>/fallbacks/cancel` stops the waiting fallback steps of a message that this agent sent. It does the same as the [cancel_fallbacks](/docs/reference/mcp#cancel_fallbacks) tool. Use it when the user answered somewhere else, for example in the terminal.
+
+```sh
+curl -X POST "https://your-beep-me.example/v1/messages/msg_123/fallbacks/cancel" \
+  -H "Authorization: Bearer $BEEPME_TOKEN"
+```
+
+```json
+{ "canceled": 1 }
+```
+
+`canceled` is the number of steps it stopped. A message from another agent returns HTTP 404.
+
 ## Next steps
 
 <Cards>

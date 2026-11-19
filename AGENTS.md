@@ -7,7 +7,7 @@ Guide for coding agents working in this repo. Product overview: [README.md](READ
 | Command | Use |
 | --- | --- |
 | `bun run dev` | Worker + dashboard on http://localhost:5173 (Vite + workerd). "Continue as developer" signs in on localhost when `DEV_LOGIN=true` in `.dev.vars`. |
-| `bun run typecheck` | `tsc -b` for the Worker, dashboard, Vite config, and CLI. Must pass with zero errors. Run `bun run types` after you change `wrangler.jsonc`. |
+| `bun run typecheck` | `tsc -b` for the Worker, dashboard, Vite config, CLI, and plugin scripts. Must pass with zero errors. Run `bun run types` after you change `wrangler.jsonc`. |
 | `bun run build` | Production build into `dist/`. Merges `.beep-me/deploy.json` into the Worker config. |
 | `bun run setup`, `bun run cli` | Guided deploy and deployment management (`scripts/cli/`). `--dry-run` reads the account and changes nothing. Docs page: `reference/cli`. |
 | `bun run upgrade` | Updates a deployed copy to the newest release tag and deploys it (`scripts/cli/upgrade.ts`). `scripts/upgrade.sh` does the git part for copies before v0.6.0, then hands off to `bun run upgrade --continue`. Docs page: `updating`. |
@@ -26,6 +26,7 @@ Do not deploy, push, or run CI workflows unless the user asks. Fixture tests are
 - Replies, choices, reactions, and inbound files are rows in `interactions` (`db/interactions.ts`). Channel hooks call `recordInteraction` with a `providerRef` so webhook retries do not duplicate rows. Agents read them with `get_replies` (`mcp/replies.ts`, `core/replies.ts`).
 - `src/worker/mcp/`: `server.ts` (instructions, `notify`), `replies.ts` (`get_replies`), `agent-tools.ts` (`list_channels`, `notification_status`, `cancel_fallbacks`), `guides.ts` (`help`, skills, prompts). The guides in `mcp/guides/*.md` are the one source for the `help` tool, the SEP-2640 skills, and the skill prompts. Skill frontmatter values with `: ` must stay quoted, or the SDK skips the skill.
 - `scripts/cli/`: the CLI, TypeScript run by Node type stripping (`erasableSyntaxOnly`, `.ts` imports). `overlay.ts` is shared with `vite.config.ts`. Every Wrangler or API write goes through `run` or `api` in `wrangler.ts`, and every git or Bun write goes through `cmd` in `versions.ts`. Each skips the write on `--dry-run`. `legacy.ts` and `overlay.ts` import only Node built-ins, because `scripts/upgrade.sh` runs them from a release before `bun install`.
+- `plugins/beep-me/`: the plugin for Claude Code, Codex, and pi. `hooks/hooks.json` serves Claude Code and pi, `hooks/codex.json` serves Codex. The scripts are plain `.mjs` with JSDoc types (`tsconfig.plugin.json`) and import only Node built-ins, because users run them without `bun install`. The marketplaces are `.claude-plugin/marketplace.json` and `.agents/plugins/marketplace.json` at the repo root. `scripts/release.mjs` bumps the manifest versions. Platform facts: `docs/research/agent-plugins.md`.
 - `src/web/`: React 19 + Tailwind CSS 4 dashboard. No router or data library; see `src/web/lib/`.
 - `src/web/docs/`: the public docs site at `/docs`. Pages are MDX in `content/`, listed in `nav.ts`. Use [docs/docs-site.md](docs/docs-site.md) when you add or edit a page. When you change behavior, update the matching docs page in the same change.
 
