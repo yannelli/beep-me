@@ -105,6 +105,8 @@ It copies the old files to `.beep-me/before-upgrade/`:
 - A `package-lock.json` that npm changed. The committed version goes back in its place.
 - An untracked `package-lock.json` or `bun.lock`. The update moves it there.
 
+When `.beep-me/deploy.json` has no D1 or KV id, for example in a new clone, the deploy reads `databaseId`, `kvNamespaceId`, and `allowedEmails` from the deployed `beep-me` Worker and saves them there. When the Worker does not exist, run `bun run setup`.
+
 ## After the update
 
 On its first request after the update, Beep Me sets the webhook of each Telegram channel again. The new webhook settings let emoji reactions arrive. Beep Me keeps the webhook address, its secret, and the updates that Telegram is holding.

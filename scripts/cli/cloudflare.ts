@@ -1,5 +1,6 @@
 import { resolveAny } from "node:dns/promises";
 import { approve, exitIfMissing, need, saveOverlay, type Ctx } from "./context.ts";
+import type { Overlay } from "./overlay.ts";
 import { bold, dim, prompt, say } from "./ui.ts";
 import { api, DB_NAME, failure, KV_TITLE, parseJson, wrangler, WORKER } from "./wrangler.ts";
 
@@ -71,6 +72,24 @@ export function workerSecrets(ctx: Ctx): WorkerSecrets {
   if (result.ok && list) return { deployed: true, names: new Set(list.map((entry) => entry.name)) };
   if (/not found/i.test(failure(result))) return { deployed: false, names: new Set() };
   throw new Error(`Could not read Worker secrets: ${failure(result)}`);
+}
+
+interface Binding {
+  type: string;
+  name: string;
+  database_id?: string;
+  id?: string;
+  namespace_id?: string;
+  text?: string;
+}
+
+/** The D1 id, KV id, and ALLOWED_EMAILS that the deployed Worker uses. */
+export async function deployedValues(ctx: Ctx): Promise<Pick<Overlay, "databaseId" | "kvNamespaceId" | "allowedEmails">> {
+  const response = await api<{ bindings?: Binding[] }>(ctx, `/accounts/${ctx.accountId ?? ""}/workers/scripts/${WORKER}/settings`);
+  const bindings = response.result?.bindings ?? [];
+  const find = (type: string, name: string) => bindings.find((binding) => binding.type === type && binding.name === name);
+  const db = find("d1", "DB");
+  return { databaseId: db?.database_id ?? db?.id, kvNamespaceId: find("kv_namespace", "OAUTH_KV")?.namespace_id, allowedEmails: find("plain_text", "ALLOWED_EMAILS")?.text };
 }
 
 const subdomains = new Map<string, string | null>();

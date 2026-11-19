@@ -2,9 +2,9 @@ import { randomBytes } from "node:crypto";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { approve, approveDestructive, exitIfMissing, requireYes, type Ctx } from "./context.ts";
-import { listCustomDomains, workersDevUrl, workerSecrets, type WorkerSecrets } from "./cloudflare.ts";
-import { customDomains, publicUrl } from "./overlay.ts";
+import { approve, approveDestructive, exitIfMissing, requireYes, saveOverlay, type Ctx } from "./context.ts";
+import { deployedValues, listCustomDomains, workersDevUrl, workerSecrets, type WorkerSecrets } from "./cloudflare.ts";
+import { customDomains, OVERLAY_FILE, publicUrl } from "./overlay.ts";
 import { bold, dim, prompt, say, spin } from "./ui.ts";
 import { failure, run, wrangler, WORKER } from "./wrangler.ts";
 
@@ -58,6 +58,18 @@ async function checkDomainOwners(ctx: Ctx): Promise<void> {
   }
 }
 
+/** Copies the deployed Worker's values into .beep-me/deploy.json, so the deploy keeps the same D1 database, KV namespace, and emails. */
+async function recoverDeployedValues(ctx: Ctx): Promise<void> {
+  const found = await deployedValues(ctx);
+  if (!found.databaseId || !found.kvNamespaceId) {
+    if (ctx.dryRun) return;
+    throw new Error("The D1 or KV id is missing, and the deployed Worker does not have them. Wrangler would create new resources. Run bun run setup first.");
+  }
+  const missing = Object.entries(found).filter(([key, value]) => value !== undefined && ctx.overlay[key as keyof typeof found] === undefined);
+  saveOverlay(ctx, Object.fromEntries(missing));
+  if (!ctx.dryRun) say.ok(`Read ${missing.map(([key]) => key).join(", ")} from the deployed Worker and saved them in ${OVERLAY_FILE}.`);
+}
+
 /** Builds with the overlay and deploys. Interactive deploys keep the terminal, so Wrangler can ask about domain conflicts. */
 export async function deployStep(ctx: Ctx, upload: Secrets): Promise<boolean> {
   const names = Object.keys(upload);
@@ -66,9 +78,7 @@ export async function deployStep(ctx: Ctx, upload: Secrets): Promise<boolean> {
     say.skip("Skipped the deploy. Run bun run cli deploy later.");
     return false;
   }
-  if (!ctx.dryRun && (!ctx.overlay.databaseId || !ctx.overlay.kvNamespaceId)) {
-    throw new Error("The D1 or KV id is missing, and Wrangler would create new resources. Run bun run setup first.");
-  }
+  if (!ctx.overlay.databaseId || !ctx.overlay.kvNamespaceId) await recoverDeployedValues(ctx);
   if (!ctx.interactive) await checkDomainOwners(ctx);
   build(ctx);
   const dir = mkdtempSync(join(tmpdir(), "beep-me-"));
