@@ -1,0 +1,20 @@
+{
+  "name": "beep-me",
+  "interface": {
+    "displayName": "Beep Me"
+  },
+  "plugins": [
+    {
+      "name": "beep-me",
+      "source": {
+        "source": "local",
+        "path": "./plugins/beep-me"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    }
+  ]
+}

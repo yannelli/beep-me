@@ -1,0 +1,72 @@
+{
+  "name": "beep-me",
+  "displayName": "Beep Me",
+  "version": "0.7.0",
+  "description": "Send permission prompts, questions, and plan reviews to your phone, and bring Beep Me answers back to the agent.",
+  "author": {
+    "name": "Ryan Yannelli",
+    "url": "https://ryanyannelli.com"
+  },
+  "homepage": "https://github.com/yannelli/beep-me/tree/main/plugins/beep-me",
+  "repository": "https://github.com/yannelli/beep-me",
+  "license": "MIT",
+  "keywords": [
+    "notifications",
+    "hooks",
+    "permissions",
+    "mcp",
+    "telegram",
+    "sms"
+  ],
+  "mcpServers": {
+    "beep-me": {
+      "type": "http",
+      "url": "${user_config.url}",
+      "headers": {
+        "Authorization": "Bearer ${user_config.token}",
+        "X-Beep-Me-Plugin": "1"
+      }
+    }
+  },
+  "userConfig": {
+    "url": {
+      "type": "string",
+      "title": "Beep Me MCP URL",
+      "description": "Your Beep Me MCP URL, for example https://beep-me.you.workers.dev/mcp. Agents > Connect shows it.",
+      "required": true
+    },
+    "token": {
+      "type": "string",
+      "title": "Agent token",
+      "description": "A Beep Me agent token that starts with beep_. Create one under Agents > Connect > Plugin.",
+      "required": true,
+      "sensitive": true
+    },
+    "prompts": {
+      "type": "boolean",
+      "title": "Send prompts to your phone",
+      "description": "Send permission prompts, questions, and plan reviews to your phone when nobody answers in the terminal.",
+      "default": true
+    },
+    "ask_after": {
+      "type": "number",
+      "title": "Seconds before a prompt goes to your phone",
+      "description": "How long a prompt waits for an answer in the terminal before Beep Me sends it. 0 sends it at once.",
+      "default": 15,
+      "min": 0,
+      "max": 3600
+    },
+    "priority": {
+      "type": "string",
+      "title": "Priority of prompts",
+      "description": "The Beep Me priority of prompts. Your routes pick the channels for each priority.",
+      "options": [
+        "low",
+        "medium",
+        "high",
+        "urgent"
+      ],
+      "default": "high"
+    }
+  }
+}

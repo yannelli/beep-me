@@ -1,11 +1,13 @@
 #!/usr/bin/env node
-// Semver release from Conventional Commits: bump package.json, prepend CHANGELOG.md, tag, push, publish the GitHub release.
+// Semver release from Conventional Commits: bump package.json and the plugin manifests, prepend CHANGELOG.md, tag, push, publish the GitHub release.
 import { execFileSync } from "node:child_process";
 import { readFileSync, writeFileSync } from "node:fs";
 
 const dryRun = process.argv.includes("--dry-run");
 const stableTag = /^v(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/;
 const levels = { patch: 1, minor: 2, major: 3 };
+// The plugin pins installs to its manifest version, so each release bumps it with package.json.
+const PLUGIN_MANIFESTS = ["plugins/beep-me/.claude-plugin/plugin.json", "plugins/beep-me/.codex-plugin/plugin.json"];
 
 const run = (command, args) => execFileSync(command, args, { encoding: "utf8" }).trim();
 const git = (...args) => run("git", args);
@@ -82,10 +84,14 @@ function main() {
 
   pkg.version = version;
   writeFileSync("package.json", `${JSON.stringify(pkg, null, 2)}\n`);
+  for (const file of PLUGIN_MANIFESTS) {
+    const manifest = JSON.parse(readFileSync(file, "utf8"));
+    writeFileSync(file, `${JSON.stringify({ ...manifest, version }, null, 2)}\n`);
+  }
   const changelog = readFileSync("CHANGELOG.md", "utf8");
   const marker = changelog.indexOf("\n## ");
   writeFileSync("CHANGELOG.md", marker < 0 ? `${changelog.trimEnd()}\n\n${section}` : `${changelog.slice(0, marker + 1)}${section}\n${changelog.slice(marker + 1)}`);
-  git("add", "package.json", "CHANGELOG.md");
+  git("add", "package.json", "CHANGELOG.md", ...PLUGIN_MANIFESTS);
   git("commit", "-m", `chore(release): v${version}`);
   git("tag", "-a", `v${version}`, "-m", `v${version}`);
   git("push", "origin", "HEAD:main", `v${version}`);

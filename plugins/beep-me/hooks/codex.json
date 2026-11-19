@@ -1,0 +1,56 @@
+{
+  "description": "Beep Me for Codex: answers come back to the session, and approval requests can go to your phone.",
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$PLUGIN_ROOT/scripts/beep-me.mjs\" session-start codex",
+            "commandWindows": "node \"%PLUGIN_ROOT%\\scripts\\beep-me.mjs\" session-start codex",
+            "timeout": 15
+          }
+        ]
+      }
+    ],
+    "PermissionRequest": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$PLUGIN_ROOT/scripts/beep-me.mjs\" permission codex --wait=1770",
+            "commandWindows": "node \"%PLUGIN_ROOT%\\scripts\\beep-me.mjs\" permission codex --wait=1770",
+            "timeout": 1800,
+            "statusMessage": "Waiting for an answer on your phone"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "notify$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$PLUGIN_ROOT/scripts/beep-me.mjs\" track codex",
+            "commandWindows": "node \"%PLUGIN_ROOT%\\scripts\\beep-me.mjs\" track codex",
+            "timeout": 15
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$PLUGIN_ROOT/scripts/beep-me.mjs\" stop codex --wait=3570",
+            "commandWindows": "node \"%PLUGIN_ROOT%\\scripts\\beep-me.mjs\" stop codex --wait=3570",
+            "timeout": 3600,
+            "statusMessage": "Waiting for your Beep Me answer"
+          }
+        ]
+      }
+    ]
+  }
+}

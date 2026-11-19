@@ -1,0 +1,17 @@
+{
+  "name": "beep-me",
+  "description": "Beep Me plugins for Claude Code, Codex, and pi.",
+  "owner": {
+    "name": "Ryan Yannelli",
+    "url": "https://ryanyannelli.com"
+  },
+  "plugins": [
+    {
+      "name": "beep-me",
+      "source": "./plugins/beep-me",
+      "description": "Send permission prompts, questions, and plan reviews to your phone, and bring Beep Me answers back to the agent.",
+      "category": "productivity",
+      "tags": ["notifications", "hooks", "permissions", "mcp"]
+    }
+  ]
+}

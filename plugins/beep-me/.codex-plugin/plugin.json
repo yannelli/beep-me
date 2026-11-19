@@ -1,0 +1,35 @@
+{
+  "name": "beep-me",
+  "version": "0.7.0",
+  "description": "Bring Beep Me answers back to Codex, and send Codex approval requests to your phone.",
+  "author": {
+    "name": "Ryan Yannelli",
+    "url": "https://ryanyannelli.com"
+  },
+  "homepage": "https://github.com/yannelli/beep-me/tree/main/plugins/beep-me",
+  "repository": "https://github.com/yannelli/beep-me",
+  "license": "MIT",
+  "keywords": [
+    "notifications",
+    "hooks",
+    "approvals",
+    "mcp",
+    "telegram",
+    "sms"
+  ],
+  "hooks": "./hooks/codex.json",
+  "interface": {
+    "displayName": "Beep Me",
+    "shortDescription": "Answers from your phone come back to Codex",
+    "longDescription": "When Codex asks you something with the Beep Me notify tool, the plugin waits for your answer and continues the session with it. Turn on BEEPME_PROMPTS to approve Codex commands from your phone.",
+    "developerName": "Ryan Yannelli",
+    "category": "Productivity",
+    "capabilities": [
+      "Interactive"
+    ],
+    "websiteURL": "https://github.com/yannelli/beep-me",
+    "brandColor": "#7C3AED",
+    "composerIcon": "./assets/icon.svg",
+    "logo": "./assets/icon.svg"
+  }
+}

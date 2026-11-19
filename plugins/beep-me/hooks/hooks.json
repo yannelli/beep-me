@@ -1,0 +1,56 @@
+{
+  "description": "Beep Me for Claude Code and pi: prompts go to your phone, and answers come back to the agent.",
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          { "type": "command", "command": "node", "args": ["${CLAUDE_PLUGIN_ROOT}/scripts/beep-me.mjs", "session-start"], "timeout": 15 }
+        ]
+      }
+    ],
+    "PermissionRequest": [
+      {
+        "matcher": "*",
+        "hooks": [
+          { "type": "command", "command": "node", "args": ["${CLAUDE_PLUGIN_ROOT}/scripts/beep-me.mjs", "permission", "--wait=7170"], "timeout": 7200 }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "notify$",
+        "hooks": [
+          { "type": "command", "command": "node", "args": ["${CLAUDE_PLUGIN_ROOT}/scripts/beep-me.mjs", "watch", "--wait=10770"], "asyncRewake": true, "timeout": 10800 }
+        ]
+      },
+      {
+        "matcher": "*",
+        "hooks": [
+          { "type": "command", "command": "node", "args": ["${CLAUDE_PLUGIN_ROOT}/scripts/beep-me.mjs", "tool-done"], "async": true, "timeout": 15 }
+        ]
+      }
+    ],
+    "PostToolUseFailure": [
+      {
+        "matcher": "*",
+        "hooks": [
+          { "type": "command", "command": "node", "args": ["${CLAUDE_PLUGIN_ROOT}/scripts/beep-me.mjs", "tool-done"], "async": true, "timeout": 15 }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          { "type": "command", "command": "node", "args": ["${CLAUDE_PLUGIN_ROOT}/scripts/beep-me.mjs", "turn-end"], "timeout": 10 }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          { "type": "command", "command": "node", "args": ["${CLAUDE_PLUGIN_ROOT}/scripts/beep-me.mjs", "turn-end"], "timeout": 10 }
+        ]
+      }
+    ]
+  }
+}
