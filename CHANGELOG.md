@@ -2,6 +2,17 @@
 
 All notable changes to Beep Me are documented here. Versions follow [Semantic Versioning](https://semver.org/). Commits follow [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/); see [CONTRIBUTING.md](CONTRIBUTING.md#versions) for how they map to releases.
 
+## [0.4.0] - 2026-11-19
+
+### Added
+
+- **telnyx:** receive replies, send MMS, and add guided setup ([c277af4](https://github.com/yannelli/beep-me/commit/c277af473b9c15fc72269d24db506bee91d6fd9f))
+- **twilio:** receive text replies and send MMS ([877c522](https://github.com/yannelli/beep-me/commit/877c52236b479482c80421819f0f3a8d5a848718))
+
+### Fixed
+
+- **sms:** match the exact Twilio number and allow a Telnyx profile change ([0e9d823](https://github.com/yannelli/beep-me/commit/0e9d823a837a0ae4e52b22d1cd5663218a45eae0))
+
 ## [0.3.0] - 2026-11-19
 
 ### Added
