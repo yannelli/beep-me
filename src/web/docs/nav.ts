@@ -16,6 +16,7 @@ export const DOC_SECTIONS: DocSection[] = [
     pages: [
       { slug: "", title: "Introduction", description: "What Beep Me does, and how a message gets from an agent to your phone." },
       { slug: "quickstart", title: "Quickstart", description: "Deploy Beep Me and get your first message in about five minutes." },
+      { slug: "updating", title: "Update Beep Me", description: "Move your copy to the newest release and deploy it with one command." },
       { slug: "local-development", title: "Local development", description: "Run Beep Me on your computer with hot reload and a developer sign-in." },
     ],
   },

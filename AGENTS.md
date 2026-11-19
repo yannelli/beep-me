@@ -10,6 +10,7 @@ Guide for coding agents working in this repo. Product overview: [README.md](READ
 | `bun run typecheck` | `tsc -b` for the Worker, dashboard, Vite config, and CLI. Must pass with zero errors. Run `bun run types` after you change `wrangler.jsonc`. |
 | `bun run build` | Production build into `dist/`. Merges `.beep-me/deploy.json` into the Worker config. |
 | `bun run setup`, `bun run cli` | Guided deploy and deployment management (`scripts/cli/`). `--dry-run` reads the account and changes nothing. Docs page: `reference/cli`. |
+| `bun run upgrade` | Updates a deployed copy to the newest release tag and deploys it (`scripts/cli/upgrade.ts`). `scripts/upgrade.sh` does the git part for copies before v0.6.0, then hands off to `bun run upgrade --continue`. Docs page: `updating`. |
 | `bun run check:docs` | Checks the docs site pages. Run it after you change `src/web/docs/` or a behavior the docs describe. |
 
 Do not deploy, push, or run CI workflows unless the user asks. Fixture tests are planned after the user's review; do not add a test suite before then.
@@ -20,9 +21,10 @@ Do not deploy, push, or run CI workflows unless the user asks. Fixture tests are
 - `src/worker/index.ts`: entry. One `OAuthProvider` per origin wraps the Hono app (`app.ts`) and the MCP handler (`mcp/handler.ts`).
 - `src/worker/core/`: `notify.ts` is the pipeline (clamp, holds, collapse, rate cap, route, deliver, log). `routing.ts` picks destinations. `deliver.ts` reserves text slots and calls adapters.
 - `src/worker/channels/`: one adapter per provider, implementing `types.ts`. Adapters return `{ ok: false, detail }` for provider errors and never put secrets in `detail`.
+- `src/worker/core/upgrade-tasks.ts`: runs once after each deploy of a new version (`meta.app_version`). Put a step there when existing data or provider settings must change for a release.
 - `src/worker/db/`: D1 access. `db/migrate.ts` applies `migrations/*.sql` at startup, each once, in order, by schema version. To change the schema, add the next numbered file and list it in `MIGRATIONS`. Never edit a migration that has shipped.
 - Replies, choices, reactions, and inbound files are rows in `interactions` (`db/interactions.ts`). Channel hooks call `recordInteraction` with a `providerRef` so webhook retries do not duplicate rows. Agents read them with `get_replies` (`mcp/replies.ts`, `core/replies.ts`).
-- `scripts/cli/`: the CLI, TypeScript run by Node type stripping (`erasableSyntaxOnly`, `.ts` imports). `overlay.ts` is shared with `vite.config.ts`. Every Wrangler or API write goes through `run` or `api` in `wrangler.ts`, which skip it on `--dry-run`.
+- `scripts/cli/`: the CLI, TypeScript run by Node type stripping (`erasableSyntaxOnly`, `.ts` imports). `overlay.ts` is shared with `vite.config.ts`. Every Wrangler or API write goes through `run` or `api` in `wrangler.ts`, and every git or Bun write goes through `cmd` in `versions.ts`. Each skips the write on `--dry-run`. `legacy.ts` and `overlay.ts` import only Node built-ins, because `scripts/upgrade.sh` runs them from a release before `bun install`.
 - `src/web/`: React 19 + Tailwind CSS 4 dashboard. No router or data library; see `src/web/lib/`.
 - `src/web/docs/`: the public docs site at `/docs`. Pages are MDX in `content/`, listed in `nav.ts`. Use [docs/docs-site.md](docs/docs-site.md) when you add or edit a page. When you change behavior, update the matching docs page in the same change.
 

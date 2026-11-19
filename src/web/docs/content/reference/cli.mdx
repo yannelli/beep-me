@@ -18,6 +18,7 @@ Use the Beep Me CLI to deploy Beep Me and to manage the deployment from your ter
 | `bun run cli google` | Replaces the Google sign-in client ID and secret. |
 | `bun run cli domain` | Moves Beep Me to your own hostname, adds aliases, or goes back to `workers.dev`. Then deploys. |
 | `bun run cli deploy` | Builds with your deployment values and deploys. |
+| `bun run upgrade` | Updates your copy to the newest release, then deploys it. It is the same as `bun run cli upgrade`. |
 | `bun run cli logs` | Streams live logs from the Worker. |
 | `bun run cli open` | Opens the dashboard in your browser. |
 | `bun run cli connect` | Prints the Claude Code command and the steps for Claude. |
@@ -93,6 +94,17 @@ Setup keeps the values for your deployment in `.beep-me/deploy.json`. Git ignore
 `bun run build` and `bun run deploy` read the file. The build writes the merged config to `dist/beep_me/wrangler.json`, and `wrangler deploy` uses it. `bun run dev` does not read the file, so local development keeps its own data and its `localhost` address.
 
 You can edit the file by hand. Then run `bun run deploy`.
+
+## Update
+
+`bun run upgrade` moves your copy to the newest release tag, runs `bun install`, and deploys. It shows the release notes and asks before it changes anything:
+
+```sh
+bun run upgrade --dry-run
+bun run upgrade --check --json
+```
+
+Copies before v0.6.0 do not have this command. For those, and for each flag, see [Update Beep Me](/docs/updating).
 
 ## Headless use
 

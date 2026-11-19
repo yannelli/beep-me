@@ -10,6 +10,14 @@ Created: 2026-11-18. Last updated: 2026-11-19.
 - Bot API 10.4 (2026-11-09) added links to topics in private chats: `https://t.me/<bot_username>/<message_thread_id>`.
 - `setWebhook` accepts `secret_token` (sent back in `X-Telegram-Bot-Api-Secret-Token`) and `allowed_updates`.
 
+## Webhook settings after an update (Bot API 10.4, checked 2026-11-19)
+
+Source: https://core.telegram.org/bots/api#setwebhook and #webhookinfo.
+
+- `setWebhook` `allowed_updates`: "If not specified, the previous setting will be used." The default list excludes `chat_member`, `message_reaction`, and `message_reaction_count`.
+- `WebhookInfo.allowed_updates` is optional. When it is missing, the bot gets the default list, so reactions do not arrive.
+- `drop_pending_updates`: "Pass True to drop all pending updates". `src/worker/core/upgrade-tasks.ts` does not send it, so queued answers stay. It sends the stored `secret_token` again, and it reads the URL from `getWebhookInfo`, so it needs no origin in the cron handler.
+
 ## How Beep Me uses them
 
 1. The user pastes a bot token. Beep Me calls `getMe` and stores `has_topics_enabled` as `privateTopics`, then sets the webhook to `/hooks/telegram/<channel id>` with a per-channel secret.

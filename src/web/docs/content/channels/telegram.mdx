@@ -90,7 +90,9 @@ Beep Me reads answers only from the chat and the group that you linked. It skips
 
 ### After you update Beep Me
 
-Beep Me tells Telegram which updates to send when it sets the webhook. Emoji reactions need the new list. Open the Telegram channel and select **Save changes**, or **Check again** when Beep Me shows it. Beep Me then sets the webhook again.
+Beep Me tells Telegram which updates to send when it sets the webhook. Emoji reactions need the new list. On its first request after an update, Beep Me sets the webhook of each Telegram channel again with this list. It keeps the webhook address and its secret. See [Update Beep Me](/docs/updating).
+
+If reactions still do not arrive, open the Telegram channel and select **Save changes**, or **Check again** when Beep Me shows it.
 
 ## Topic threads
 

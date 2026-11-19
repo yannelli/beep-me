@@ -60,7 +60,15 @@ The setup script shows each step before it changes anything. It does these steps
 
 Run `bun run setup --dry-run` to see the plan first. In CI or from an agent, pass the inputs as flags: `bun run setup --yes --account-id <id> --emails you@example.com`. Missing inputs exit with code 2.
 
-Manage the deployment with `bun run cli`. With no command it opens a menu. The commands are `status`, `agents`, `channels`, `messages`, `pause`, `resume`, `emails`, `google`, `domain`, `deploy`, `logs`, `open`, `connect`, and `teardown`. `bun run cli domain` moves Beep Me to a hostname in one of your Cloudflare zones, adds alias hostnames, or goes back to `workers.dev`. Pass `--yes` to run a command without questions, or `--dry-run` to print each change first. `bun run cli <command> --help` shows the flags of one command. Each deployment documents the CLI at `/docs/reference/cli`.
+Manage the deployment with `bun run cli`. With no command it opens a menu. The commands are `status`, `agents`, `channels`, `messages`, `pause`, `resume`, `emails`, `google`, `domain`, `deploy`, `logs`, `open`, `connect`, `upgrade`, and `teardown`. `bun run cli domain` moves Beep Me to a hostname in one of your Cloudflare zones, adds alias hostnames, or goes back to `workers.dev`. Pass `--yes` to run a command without questions, or `--dry-run` to print each change first. `bun run cli <command> --help` shows the flags of one command. Each deployment documents the CLI at `/docs/reference/cli`.
+
+To update, run `bun run upgrade`. It moves your copy to the newest release and deploys it. Copies before v0.6.0 do not have this command. Run this line once in the Beep Me folder instead:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/yannelli/beep-me/main/scripts/upgrade.sh | bash
+```
+
+Each deployment documents updates at `/docs/updating`.
 
 Then do these steps on your phone:
 

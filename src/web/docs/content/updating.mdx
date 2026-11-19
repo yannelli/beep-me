@@ -1,0 +1,147 @@
+Use this page to move your Beep Me copy to the newest release and deploy it. Your secrets, channels, agents, and messages stay in Cloudflare. The database schema updates itself on the first request after the deploy.
+
+## Update with one command
+
+Run this in your Beep Me folder:
+
+```sh
+bun run upgrade
+```
+
+`bun run cli upgrade` does the same. In the `bun run cli` menu, select **Update Beep Me**. When a newer release exists, the menu shows **Update available: v0.6.0** in its place.
+
+The update does these steps:
+
+1. Checks that the folder is a git checkout of Beep Me, with Node 24 or later and Bun.
+2. Reads the release tags from the `upstream` remote, or from `origin` when there is no `upstream`.
+3. Shows the release notes from `CHANGELOG.md` for each version between yours and the newest one.
+4. Moves deployment values out of `wrangler.jsonc` into `.beep-me/deploy.json`. See [What moves where](#what-moves-where).
+5. Asks you to confirm. Then it moves the code to the release tag with a git fast-forward.
+6. Runs `bun install`.
+7. Builds and deploys with the same step as `bun run cli deploy`, which asks before it deploys.
+8. Calls `/api/session` on your deployment to check that it answers.
+9. Lists the steps that you do in the dashboard for the versions you skipped.
+
+To see the plan first, run a dry run:
+
+```sh
+bun run upgrade --dry-run
+```
+
+A dry run fetches the release tag and prints each git, Bun, and Wrangler command. It changes no file and deploys nothing.
+
+## Update a copy from before v0.6.0
+
+These releases do not have `bun run upgrade`. Run this line once in your Beep Me folder:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/yannelli/beep-me/main/scripts/upgrade.sh | bash
+```
+
+The script moves your deployment values out of `wrangler.jsonc`, updates the code to the newest release, and runs `bun install`. Then it starts `bun run upgrade --continue`, which asks before it deploys. After this, use `bun run upgrade`.
+
+The script needs Node 24 or later and Bun. If Bun is missing, the script stops and shows the install command:
+
+```sh
+curl -fsSL https://bun.sh/install | bash
+```
+
+To pass options to the script, add them after `bash -s --`:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/yannelli/beep-me/main/scripts/upgrade.sh | bash -s -- --dry-run
+```
+
+The script accepts `--dry-run`, `--yes`, `--no-deploy`, and `--remote <name>`.
+
+## Flags
+
+| Flag | What it does |
+| --- | --- |
+| `--check` | Compares your version with the newest release and stops. Add `--json` for JSON. |
+| `--to <vX.Y.Z>` | Updates to this release. An older release is refused. |
+| `--remote <name>` | Reads releases from this git remote. |
+| `--dry-run` | Prints each step and changes nothing. |
+| `--yes` | Runs without questions and accepts each step. |
+| `--no-deploy` | Updates the code and the packages, and skips the deploy. Run `bun run cli deploy` later. |
+| `--continue` | Runs only the deploy part. Use it after a manual `git pull` and `bun install`. |
+
+Check for an update from a script:
+
+```sh
+bun run upgrade --check --json
+```
+
+```json
+{
+  "current": "0.5.0",
+  "latest": "0.6.0",
+  "updateAvailable": true,
+  "remote": "origin"
+}
+```
+
+Without a terminal, the update asks no questions. Pass `--yes` to accept the steps. When `--yes` is missing, the update lists it and exits with code 2.
+
+## What moves where
+
+v0.1.0 wrote your deployment values into `wrangler.jsonc`. Later releases keep them in `.beep-me/deploy.json`, which git ignores. See [Deployment values](/docs/reference/cli#deployment-values).
+
+| In `wrangler.jsonc` | In `.beep-me/deploy.json` |
+| --- | --- |
+| `database_id` of the `DB` binding | `databaseId` |
+| `id` of the `OAUTH_KV` binding | `kvNamespaceId` |
+| `ALLOWED_EMAILS` | `allowedEmails` |
+| `PUBLIC_URL` | `domain` |
+| Custom domain `routes` | `domain` and `aliases` |
+| `account_id` | `accountId` |
+| `workers_dev` | `workersDev` |
+
+A value that is already in `.beep-me/deploy.json` stays. The update writes the file, reads it back, and then puts back the committed `wrangler.jsonc`.
+
+It copies the old files to `.beep-me/before-upgrade/`:
+
+- Your edited `wrangler.jsonc`.
+- A `package-lock.json` that npm changed. The committed version goes back in its place.
+- An untracked `package-lock.json` or `bun.lock`. The update moves it there.
+
+## After the update
+
+On its first request after the update, Beep Me sets the webhook of each Telegram channel again. The new webhook settings let emoji reactions arrive. Beep Me keeps the webhook address, its secret, and the updates that Telegram is holding.
+
+Some releases add features that you turn on in the dashboard. The update lists the steps for the versions you skipped:
+
+| Release | Step |
+| --- | --- |
+| 0.4.0 | Twilio: to get text replies, open the channel and select **Save changes**. |
+| 0.4.0 | Telnyx: to get text replies, open the channel. In **Telnyx setup**, select **Send replies to Beep Me**. |
+| 0.5.0 | Resend: to get email replies, open the channel. In **Domain and replies**, select **Create webhook**. |
+
+## When the update stops
+
+The update stops before it changes anything in these cases. Fix the cause, then run `bun run upgrade` again.
+
+| Message | What to do |
+| --- | --- |
+| These files have local edits | Commit the edits, or put them away with `git stash`. In a terminal, the update offers to run `git stash` for you. Get the edits back later with `git stash pop`. |
+| This checkout has commits that are not in the release | Move your commits onto the release with `git rebase <tag>`. |
+| `wrangler.jsonc` has edits that `.beep-me/deploy.json` cannot hold | Undo the listed edits in `wrangler.jsonc`. Keep the values from [What moves where](#what-moves-where) in the file, so the update can move them. |
+| These untracked files are in the release | Move or delete the files. Git does not overwrite them. |
+| Is older than the installed version | Beep Me does not go back to an older release. The database schema only moves forward, and older code cannot read a newer schema. |
+| `bun install` failed | Fix the error, then run `bun install` and `bun run upgrade --continue`. |
+
+When the deploy fails after the code moved, fix the error and run `bun run cli deploy`. When `/api/session` does not answer, run `bun run cli logs` and open the dashboard.
+
+## Next steps
+
+<Cards>
+
+<Card href="/docs/reference/cli" title="CLI">
+Manage the deployment from your terminal.
+</Card>
+
+<Card href="/docs/reference/troubleshooting" title="Troubleshooting">
+Fix sign-in, delivery, and webhook problems.
+</Card>
+
+</Cards>
