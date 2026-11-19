@@ -2,6 +2,12 @@
 
 All notable changes to Beep Me are documented here. Versions follow [Semantic Versioning](https://semver.org/). Commits follow [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/); see [CONTRIBUTING.md](CONTRIBUTING.md#versions) for how they map to releases.
 
+## [0.6.1] - 2026-11-19
+
+### Fixed
+
+- **cli:** read the D1 and KV ids from the deployed Worker when deploy.json lacks them ([b0b8af2](https://github.com/yannelli/beep-me/commit/b0b8af26ee5ee73c0fdaab09bdf61961c7800a17))
+
 ## [0.6.0] - 2026-11-19
 
 ### Added

@@ -1,6 +1,6 @@
 {
   "name": "beep-me",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "private": true,
   "description": "Remote MCP server on Cloudflare Workers that lets Claude, Claude Code, and any AI agent message you by SMS, Telegram, email, Slack, Discord, or phone push.",
   "keywords": [
