@@ -2,6 +2,17 @@
 
 All notable changes to Beep Me are documented here. Versions follow [Semantic Versioning](https://semver.org/). Commits follow [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/); see [CONTRIBUTING.md](CONTRIBUTING.md#versions) for how they map to releases.
 
+## [0.6.0] - 2026-11-19
+
+### Added
+
+- **worker:** set Telegram webhooks again once after an update ([5e5a579](https://github.com/yannelli/beep-me/commit/5e5a5791f713a4c7080588c2d280cf9327f88e9c))
+- **cli:** add bun run upgrade and a bootstrap for older installs ([7665410](https://github.com/yannelli/beep-me/commit/76654101d29cc210418c3f488d3672d0a0751685))
+
+### Fixed
+
+- **cli:** name v0.5.1 in the upgrade.sh header ([b054bd6](https://github.com/yannelli/beep-me/commit/b054bd68c54c24455fbc768de1baed88b7500b41))
+
 ## [0.5.1] - 2026-11-19
 
 ### Fixed
