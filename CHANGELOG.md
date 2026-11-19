@@ -2,6 +2,20 @@
 
 All notable changes to Beep Me are documented here. Versions follow [Semantic Versioning](https://semver.org/). Commits follow [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/); see [CONTRIBUTING.md](CONTRIBUTING.md#versions) for how they map to releases.
 
+## [0.7.0] - 2026-11-19
+
+### Added
+
+- **web:** fallbacks card, fallback steps on messages, Got it, and reply channel names ([0a7a6de](https://github.com/yannelli/beep-me/commit/0a7a6de52e048fe3b22d4a06908053b74c07fdab))
+- **mcp:** list_channels, cancel_fallbacks, help guides, skills, reply provenance, and watch URLs ([ed60dc8](https://github.com/yannelli/beep-me/commit/ed60dc8910b39e41bb664e6668a5489561004232))
+- **worker:** agent-picked channels, fallback steps on a one-minute cron, and reply match source ([37ec6e1](https://github.com/yannelli/beep-me/commit/37ec6e1ae4f7af25a00750b248ef69a3bf81f9ba))
+- **shared:** add fallback settings, reply match source, and delivery reasons to the contract ([8fc1c52](https://github.com/yannelli/beep-me/commit/8fc1c522545d8edd2b09c8ad1cd0adba7f829b09))
+
+### Fixed
+
+- **worker:** send only failed steps inline, match agent steps to the agent's channels, and keep dashboard answers off chat channels ([a3ccc64](https://github.com/yannelli/beep-me/commit/a3ccc64763c4a58188575076e992cb68403c3320))
+- **mcp:** quote skill descriptions and drop the repeated dashboard line in get_replies ([fb2bd53](https://github.com/yannelli/beep-me/commit/fb2bd53e0abaadd1d2b68d4fdc0f75ce6136078f))
+
 ## [0.6.1] - 2026-11-19
 
 ### Fixed
