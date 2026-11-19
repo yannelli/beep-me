@@ -69,9 +69,10 @@ export function escapeHtml(text: string): string {
 }
 
 export const TELEGRAM_LIMIT = 4096;
+export const TELEGRAM_CAPTION_LIMIT = 1024;
 
-/** Telegram HTML. Text is cut before escaping, so the visible length stays within 4096. */
-export function telegramHtml(message: OutboundMessage, footer = ""): string {
+/** Telegram HTML. Text is cut before escaping, so the visible length stays within `limit` (1024 for captions). */
+export function telegramHtml(message: OutboundMessage, footer = "", limit = TELEGRAM_LIMIT): string {
   const { headline, body } = parts(message);
   const info = PRIORITY_INFO[message.priority];
   const metaRest = [senderLabel(message), topicTag(message)].filter(Boolean).join(DOT);
@@ -79,7 +80,7 @@ export function telegramHtml(message: OutboundMessage, footer = ""): string {
   const urlText = message.url ? clip(message.url, 200) : "";
   const link = !message.url ? "" : isHttpUrl(message.url) ? `<a href="${escapeHtml(message.url)}">${escapeHtml(urlText)}</a>` : escapeHtml(urlText);
   const visibleFixed = [metaLine(message), headline, urlText, footer].join("\n\n").length;
-  const bodyText = clip(body, Math.max(TELEGRAM_LIMIT - visibleFixed - 8, 0));
+  const bodyText = clip(body, Math.max(limit - visibleFixed - 8, 0));
   const blocks = [meta, `<b>${escapeHtml(headline)}</b>`, bodyText ? escapeHtml(bodyText) : "", link, footer ? `<i>${escapeHtml(footer)}</i>` : ""];
   return blocks.filter(Boolean).join("\n\n");
 }

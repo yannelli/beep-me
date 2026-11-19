@@ -106,6 +106,8 @@ export interface ChannelAdapter<K extends ChannelKind> {
   markRepeat?(ctx: SendContext<K>, providerId: string, message: OutboundMessage, count: number): Promise<void>;
   /** Streams an inbound file to the agent or dashboard. `ref` is the value stored in InboundMedia. */
   fetchMedia?(ctx: SendContext<K>, ref: string): Promise<Response>;
+  /** Runs after an agent reads interactions from this channel, with their providerRef values. Telegram reacts to the answer. */
+  markRead?(ctx: SendContext<K>, refs: string[]): Promise<void>;
 }
 
 export type AdapterRegistry = { [K in ChannelKind]: ChannelAdapter<K> };
@@ -114,4 +116,5 @@ export type AdapterRegistry = { [K in ChannelKind]: ChannelAdapter<K> };
 export const TELEGRAM_CALLBACK = {
   muteAgent: (agentId: string, minutes: number) => `mute:${agentId}:${minutes}`,
   pauseAll: (minutes: number) => `pause:${minutes}`,
+  answer: (messageId: string, index: number) => `ans:${messageId}:${index}`,
 } as const;

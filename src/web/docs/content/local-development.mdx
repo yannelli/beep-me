@@ -89,7 +89,7 @@ Beep Me checks whether its address starts with `https://`. On `http://localhost`
 | --- | --- |
 | Session cookie | Named `beepme_session`, without the `Secure` flag. |
 | Telegram | Beep Me does not set a webhook. The channel test says `Webhook not set because http://localhost:5173 is not https.` |
-| Telegram chat link | While a link waits, the dashboard reloads the channel every 2 seconds. Beep Me then calls `getUpdates` to find your **Start** message. |
+| Telegram chat link and answers | Beep Me calls `getUpdates` when you open the channel and each time an agent reads replies. While a link waits, the dashboard reloads the channel every 2 seconds. |
 | Text message receipts | Beep Me does not ask the provider for receipts. Deliveries stay at `sent`. |
 | Message cap alert | The alert has no link to the agent. |
 

@@ -1,11 +1,11 @@
-Telegram gives you a private chat with your own bot. Medium messages arrive in that chat. Low messages go to a separate thread for each topic. Each message from an agent has a button that mutes that agent for one hour.
+Telegram gives you a private chat with your own bot. Medium messages arrive in that chat. Low messages go to a separate thread for each topic. You can answer an agent right in the chat: tap a button, reply, or send a photo, a file, or a voice note. Each message from an agent also has a button that mutes that agent for one hour.
 
 With automatic routes, Beep Me also sends High and Urgent messages to Telegram when you have no text message or phone push channel. See [Which messages each channel gets](/docs/channels#which-messages-each-channel-gets).
 
 ## Before you start
 
 - A Telegram account, and the Telegram app on your phone.
-- A Beep Me deployment on an `https://` address. Beep Me uses a Telegram webhook for the **Mute** button. Telegram can call only `https://` addresses.
+- A Beep Me deployment on an `https://` address. Telegram sends your answers and button taps to a webhook, and Telegram calls only `https://` addresses. For local development, see [Local development](#local-development).
 
 ## Set up Telegram
 
@@ -52,11 +52,45 @@ https://example.com/run/42
 ```
 
 - The first line shows the priority, the agent name, and the topic. The priority and the title are bold.
-- Below the message are two buttons: `Mute Claude Code 1h`, and **Open link** when the message has a web link.
-- Beep Me turns off link previews.
+- When the agent offers options, each option is a button. Short options go two to a row.
+- Below the options are `Mute Claude Code 1h`, and **Open link** when the message has a web link.
+- When the agent waits for an answer and offers no options, Telegram opens the reply field on the message.
+- Beep Me turns off link previews. Telegram's servers load a link to make a preview, and agents can send private links.
 - Telegram allows 4,096 characters. Beep Me shortens the body to fit.
 - During quiet hours, the message arrives without sound.
 - Test messages start with "🧪 Test" and have no **Mute** button.
+
+## Files from agents
+
+An agent can attach up to 10 files. Beep Me uploads each file to Telegram:
+
+- One file with a short message arrives as one message. The text is the caption, and the buttons are below it. A caption holds 1,024 characters.
+- With more files, or a longer text, the files arrive first without sound. The message with the buttons follows as a reply to them.
+- Photos and videos arrive together as an album, up to 10 in each. PDFs and other documents make a second album. Audio makes a third.
+- JPEG, PNG, and WebP images up to 10 MB show as photos. Larger images and other image types arrive as files. MP4 shows as a video, MP3 and M4A as audio, and OGG as a voice note.
+
+If a file cannot be sent, the text still arrives. The delivery log shows "Files not sent:" and the reason.
+
+## Answer an agent
+
+Each answer goes to the agent that sent the message. The agent reads it with `get_replies` or `GET /v1/replies`. See [Replies](/docs/agents/replies).
+
+| You do this | The agent gets |
+| --- | --- |
+| Tap an option button | A `choice` with the option. Beep Me adds "✅" and the option under the message and removes the option buttons. Telegram shows "Sent: " and the option. |
+| Reply to the message | A `reply` with your text. |
+| Send a message without a reply | A `reply` to the newest message in that chat or topic thread from the last 24 hours. A message that waits for an answer comes first. |
+| Send a number, or the text of an option | A `choice`, when the message offered options. For example, "2" picks the second option. |
+| Send a photo, a file, a voice note, an audio file, or a video | A `reply` with the file. The caption is the text. The agent can download files up to 20 MB. |
+| React with an emoji | A `reaction` with the emoji. |
+
+When the agent reads your answer, the bot reacts to it with 👀. Button taps and reactions get no 👀.
+
+Beep Me reads answers only from the chat and the group that you linked. It skips commands such as `/help`. If no message matches, Beep Me stores the answer without a message, and no agent gets it.
+
+### After you update Beep Me
+
+Beep Me tells Telegram which updates to send when it sets the webhook. Emoji reactions need the new list. Open the Telegram channel and select **Save changes**, or **Check again** when Beep Me shows it. Beep Me then sets the webhook again.
 
 ## Topic threads
 
@@ -93,7 +127,7 @@ When topic threads are off, Beep Me shows "Topic threads are off. Messages with 
 
 Tap `Mute <agent name> 1h` below a message. Telegram shows, for example, "Muted Claude Code for 1 h." For one hour, Beep Me does not deliver messages from that agent. Activity still records them. See [Agent access](/docs/agents/access).
 
-The button works only in the chat or group that you linked to Beep Me.
+The button works only in the chat or group that you linked to Beep Me. The **Mute** button stays after you tap an option.
 
 ## Repeated messages
 
@@ -105,7 +139,12 @@ Paste the token of the new bot in **Bot token**. Select **Save changes**. Beep M
 
 ## Local development
 
-On an `http://` address, Beep Me does not set the Telegram webhook. Linking still works, because the dashboard asks Telegram for your **Start** message. The **Mute** button does not work without the webhook. See [Local development](/docs/local-development).
+On an `http://` address, Beep Me does not set the Telegram webhook. Beep Me asks Telegram for new updates with `getUpdates` instead:
+
+- When you open the channel in the dashboard. While a link waits, the dashboard does this every 2 seconds.
+- Each time an agent calls `get_replies` or `GET /v1/replies`. With `wait_seconds`, Beep Me asks again every 2 seconds.
+
+Linking, answers, buttons, and the **Mute** button all work. A button tap shows its result at the next check. See [Local development](/docs/local-development).
 
 ## Troubleshooting
 
@@ -118,7 +157,10 @@ On an `http://` address, Beep Me does not set the Telegram webhook. Linking stil
 | The bot replies "Turn on **Topics** in the settings of this group." | Turn on **Topics** for the group. Then select **Select a group in Telegram** again. |
 | "Sent to the main chat. Topic failed: createForumTopic: ..." | Make the bot an admin of the group with the permission to manage topics. |
 | "Telegram 403: Forbidden: bot was blocked by the user" | Unblock the bot in Telegram. Then tap **Start** in the bot chat. |
-| The **Mute** button does nothing | Your deployment uses `http://`. The **Mute** button needs an `https://` address. |
+| A button does nothing | On `https://`, open the channel and select **Save changes** to set the webhook again. On `http://`, the tap waits for the next check. Open the channel, or let the agent read replies. |
+| Reactions do not reach the agent | Select **Save changes** on the channel, so the webhook asks for reactions. Reactions count only on messages from Beep Me. |
+| "Files not sent: ..." | Telegram did not take a file. The text arrived. The reason follows the colon. |
+| The agent gets a file link that fails | Bots can download files up to 20 MB from Telegram. Send a larger file another way. |
 
 For other problems, see [Troubleshooting](/docs/reference/troubleshooting).
 

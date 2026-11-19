@@ -9,7 +9,7 @@ import type { ChannelAdapter, OutboundMessage } from "../channels/types";
 import { sendToChannel } from "../core/deliver";
 import { configStatus, deleteChannel, getChannel, listChannels, saveChannel, toChannelDTO, type StoredChannel } from "../db/channels";
 import { finishDelivery, finishMessage, insertDelivery, insertMessage } from "../db/messages";
-import { pollTelegramLink } from "../hooks/telegram";
+import { pollTelegramUpdates } from "../hooks/telegram";
 import { randomId, randomString } from "../lib/crypto";
 import { badRequest, notFound, readJson, zodFields } from "./util";
 
@@ -72,7 +72,7 @@ channelsApi.get("/:id", async (c) => {
   let channel = await getChannel(c.env, c.get("user").id, c.req.param("id"));
   if (!channel) return notFound(c, "Channel not found");
   if (channel.kind === "telegram" && !c.get("origin").startsWith("https://")) {
-    await pollTelegramLink(c.env, channel);
+    await pollTelegramUpdates(c.env, channel);
     channel = (await getChannel(c.env, c.get("user").id, channel.id)) ?? channel;
   }
   return c.json(toChannelDTO(channel));

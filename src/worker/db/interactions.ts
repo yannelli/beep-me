@@ -85,20 +85,24 @@ export async function findMessageByProviderId(db: D1Database, channelId: string,
   return row ? { messageId: row.id, agentId: row.agent_id, options: JSON.parse(row.options) as string[] } : null;
 }
 
-/** The newest message sent on a channel since `since`. With preferAwaiting, messages that asked for a reply win. */
+/** The newest message sent on a channel since `since`. With preferAwaiting, messages that asked for a reply win. providerPrefix limits it to one chat, topicKey to one topic. */
 export async function latestMessageForChannel(
   db: D1Database,
   channelId: string,
-  options: { since: number; target?: "main" | "topic"; preferAwaiting?: boolean },
+  options: { since: number; target?: "main" | "topic"; preferAwaiting?: boolean; providerPrefix?: string; topicKey?: string },
 ): Promise<MatchedMessage | null> {
   const awaiting = options.preferAwaiting ? "(m.expect_reply = 1 OR m.options != '[]') DESC," : "";
+  const filters: [string, string][] = [];
+  if (options.target) filters.push(["d.target = ?", options.target]);
+  if (options.providerPrefix) filters.push(["d.provider_id LIKE ?", `${options.providerPrefix}%`]);
+  if (options.topicKey) filters.push(["m.topic_key = ?", options.topicKey]);
   const row = await db
     .prepare(
       `SELECT m.id, m.agent_id, m.options FROM deliveries d JOIN messages m ON m.id = d.message_id
-       WHERE d.channel_id = ? AND d.created_at > ? AND d.status IN ('sent', 'delivered') ${options.target ? "AND d.target = ?" : ""}
+       WHERE d.channel_id = ? AND d.created_at > ? AND d.status IN ('sent', 'delivered') ${filters.map(([sql]) => `AND ${sql}`).join(" ")}
        ORDER BY ${awaiting} d.created_at DESC LIMIT 1`,
     )
-    .bind(...[channelId, options.since, ...(options.target ? [options.target] : [])])
+    .bind(channelId, options.since, ...filters.map(([, value]) => value))
     .first<{ id: string; agent_id: string | null; options: string }>();
   return row ? { messageId: row.id, agentId: row.agent_id, options: JSON.parse(row.options) as string[] } : null;
 }

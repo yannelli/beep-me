@@ -1,8 +1,9 @@
 import { Hono } from "hono";
 import type { AppEnv } from "../auth/session";
-import { tg, type TgCallbackQuery, type TgMessage, type TgUpdate } from "../channels/telegram-api";
+import { TELEGRAM_UPDATES, getUpdates, tg, type TgCallbackQuery, type TgMessage, type TgUpdate } from "../channels/telegram-api";
+import { recordTelegramChoice, recordTelegramMessage, recordTelegramReaction } from "../channels/telegram-inbound";
 import { getAgent, updateAgent } from "../db/agents";
-import { configStatus, getChannel, saveChannel, type StoredChannel } from "../db/channels";
+import { configStatus, getChannel, listChannels, saveChannel, type StoredChannel } from "../db/channels";
 import { getUser, saveSettings } from "../db/users";
 import { timingSafeEqual } from "../lib/crypto";
 
@@ -69,6 +70,7 @@ async function handleCallback(env: Env, channel: StoredChannel, query: TgCallbac
   const answer = (text: string) => tg(botToken(channel), "answerCallbackQuery", { callback_query_id: query.id, text }).catch(() => undefined);
   if (!isLinkedChat(channel, query.message?.chat.id)) return void (await answer("This chat is not linked to Beep Me."));
   const [action, first, second] = (query.data ?? "").split(":");
+  if (action === "ans" && first) return void (await answer(await recordTelegramChoice(env, channel, query, first, Number(second))));
   if (action === "mute" && first) {
     const minutes = Math.min(Number(second) || 60, 7 * 1440);
     const agent = await getAgent(env.DB, first, channel.userId);
@@ -87,6 +89,8 @@ async function handleCallback(env: Env, channel: StoredChannel, query: TgCallbac
 
 export async function handleTelegramUpdate(env: Env, channel: StoredChannel, update: TgUpdate): Promise<void> {
   if (update.callback_query) return handleCallback(env, channel, update.callback_query);
+  const reaction = update.message_reaction;
+  if (reaction) return isLinkedChat(channel, reaction.chat.id) ? recordTelegramReaction(env, channel, reaction) : undefined;
   const removed = update.my_chat_member;
   if (removed && ["left", "kicked"].includes(removed.new_chat_member.status) && String(removed.chat.id) === channel.config.topicsChatId) {
     channel.config = { ...channel.config, topicsChatId: undefined, topicsChatTitle: undefined };
@@ -94,8 +98,12 @@ export async function handleTelegramUpdate(env: Env, channel: StoredChannel, upd
     return;
   }
   const message = update.message;
-  const text = message?.text?.trim() ?? "";
-  if (!message || !text.startsWith("/start")) return;
+  if (!message) return;
+  const text = message.text?.trim() ?? "";
+  if (!text.startsWith("/start")) {
+    if (isLinkedChat(channel, message.chat.id)) await recordTelegramMessage(env, channel, message);
+    return;
+  }
   const code = text.split(/\s+/)[1];
   if (code) return linkChat(env, channel, message, code);
   if (!isLinkedChat(channel, message.chat.id)) {
@@ -103,16 +111,21 @@ export async function handleTelegramUpdate(env: Env, channel: StoredChannel, upd
   }
 }
 
-/** Local development has no public webhook URL, so the dashboard polls getUpdates while a link is pending. */
-export async function pollTelegramLink(env: Env, channel: StoredChannel): Promise<void> {
-  const pending = await env.DB.prepare("SELECT code FROM link_codes WHERE channel_id = ? AND expires_at > ? LIMIT 1")
-    .bind(channel.id, Date.now())
-    .first<{ code: string }>();
-  if (!pending) return;
-  const updates = await tg<TgUpdate[]>(botToken(channel), "getUpdates", { timeout: 0, allowed_updates: ["message"] }).catch(() => []);
+/** Local development has no public webhook URL, so Beep Me reads updates with getUpdates: links, answers, and button taps. */
+export async function pollTelegramUpdates(env: Env, channel: StoredChannel): Promise<void> {
+  const token = botToken(channel);
+  const updates = await getUpdates(token, { timeout: 0, allowed_updates: TELEGRAM_UPDATES }).catch(() => []);
   for (const update of updates) {
-    if (update.message?.text?.includes(pending.code)) await handleTelegramUpdate(env, channel, update);
+    await handleTelegramUpdate(env, channel, update).catch((error: unknown) => console.error("telegram update failed", error));
   }
   const last = updates.at(-1);
-  if (last) await tg(botToken(channel), "getUpdates", { offset: last.update_id + 1, timeout: 0 }).catch(() => undefined);
+  if (last) await getUpdates(token, { offset: last.update_id + 1, timeout: 0 }).catch(() => undefined);
+}
+
+/** Polls the Telegram channels of the agent's owner. Used when an agent reads replies on an http origin. */
+export async function pollTelegramForAgent(env: Env, agentId: string): Promise<void> {
+  const agent = await getAgent(env.DB, agentId);
+  if (!agent) return;
+  const channels = await listChannels(env, agent.userId);
+  await Promise.all(channels.filter((channel) => channel.kind === "telegram" && channel.enabled).map((channel) => pollTelegramUpdates(env, channel)));
 }

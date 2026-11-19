@@ -4,6 +4,7 @@ import { adapters } from "../channels/index";
 import type { ChannelAdapter, InboundMedia } from "../channels/types";
 import { getChannel } from "../db/channels";
 import { listInteractionsForAgent, markInteractionsRead, toInteractionDTO, type InteractionRow } from "../db/interactions";
+import { pollTelegramForAgent } from "../hooks/telegram";
 import { base64url } from "../lib/crypto";
 import { sendContext } from "./deliver";
 
@@ -28,6 +29,7 @@ export async function fetchReplies(env: Env, origin: string, agentId: string, qu
   const wait = Math.min(Math.max(query.waitSeconds, 0), 50) * 1000;
   let rows: InteractionRow[] = [];
   for (;;) {
+    if (!origin.startsWith("https://")) await pollTelegramForAgent(env, agentId);
     rows = await listInteractionsForAgent(env.DB, agentId, {
       messageId: query.messageId,
       since: query.since,
@@ -38,7 +40,27 @@ export async function fetchReplies(env: Env, origin: string, agentId: string, qu
     await new Promise((resolve) => setTimeout(resolve, 2000));
   }
   await markInteractionsRead(env.DB, rows.map((row) => row.id));
+  await acknowledgeRead(env, rows.filter((row) => row.read_at === null));
   return { replies: rows.map((row) => toInteractionDTO(row, `${origin}/v1/media`)), rows, waitedSeconds: Math.round((Date.now() - started) / 1000) };
+}
+
+/** Calls each channel's markRead hook, for example a Telegram reaction on the answer. Errors do not fail the read. */
+async function acknowledgeRead(env: Env, rows: InteractionRow[]): Promise<void> {
+  const byChannel = new Map<string, { userId: string; refs: string[] }>();
+  for (const row of rows) {
+    if (!row.provider_ref) continue;
+    const entry = byChannel.get(row.channel_id) ?? { userId: row.user_id, refs: [] };
+    entry.refs.push(row.provider_ref);
+    byChannel.set(row.channel_id, entry);
+  }
+  await Promise.all(
+    [...byChannel].map(async ([channelId, entry]) => {
+      const channel = await getChannel(env, entry.userId, channelId);
+      const adapter = channel ? (adapters[channel.kind] as ChannelAdapter<ChannelKind>) : null;
+      if (!channel || !adapter?.markRead) return;
+      await adapter.markRead(sendContext(env, channel, "main", null), entry.refs).catch((error: unknown) => console.error("markRead failed", channel.kind, error));
+    }),
+  );
 }
 
 const MEDIA_HEADERS = { "cache-control": "private, max-age=300", "x-content-type-options": "nosniff", "content-security-policy": "default-src 'none'; sandbox" };
