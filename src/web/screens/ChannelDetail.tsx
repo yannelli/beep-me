@@ -15,6 +15,7 @@ import { channelStatus, useChannelToggle } from "./channels/ChannelCard";
 import { ChannelForm } from "./channels/ChannelForm";
 import { ChannelTests } from "./channels/ChannelTests";
 import { TelegramLink } from "./channels/TelegramLink";
+import { TelnyxSetup } from "./channels/TelnyxSetup";
 
 function BackLink() {
   return (
@@ -96,6 +97,12 @@ function Detail({ channel }: { channel: ChannelDTO }) {
       {channel.kind === "telegram" && (
         <Card title="Telegram chat">
           <TelegramLink channel={channel} />
+        </Card>
+      )}
+
+      {channel.kind === "telnyx" && (
+        <Card title="Telnyx setup">
+          <TelnyxSetup channel={channel} />
         </Card>
       )}
 

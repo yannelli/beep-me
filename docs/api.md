@@ -2,7 +2,7 @@
 
 Created: 2026-11-18. Last updated: 2026-11-18.
 
-The dashboard talks to the Worker over same-origin JSON under `/api`. The session cookie authenticates each request. Mutating requests send `content-type: application/json`. Errors return `{ "error": string, "fields"?: Record<string, string> }`. Types live in [`src/shared/api.ts`](../src/shared/api.ts).
+The dashboard talks to the Worker over same-origin JSON under `/api`. The session cookie authenticates each request. Mutating requests send `content-type: application/json`. Errors return `{ "error": string, "fields"?: Record<string, string> }`. Types live in [`src/shared/api.ts`](../src/shared/api.ts). Telnyx setup types live in [`src/shared/telnyx-setup.ts`](../src/shared/telnyx-setup.ts).
 
 | Method | Path | Body | Returns |
 | --- | --- | --- | --- |
@@ -29,7 +29,10 @@ The dashboard talks to the Worker over same-origin JSON under `/api`. The sessio
 | POST | `/api/messages/test` | `SendTestBody` | `MessageDTO` (full pipeline, sender "Beep Me") |
 | GET | `/api/topics` | | `{ items: TopicDTO[] }` |
 | GET | `/api/media/:interaction/:index` | | A file the user sent back, streamed through the channel |
-| * | `/api/integrations/telnyx/*` | | Guided Telnyx setup (numbers, messaging profiles, 10DLC) |
+| POST | `/api/integrations/telnyx/account` | `{ apiKey } \| { channelId }` | `TelnyxAccountDTO` (numbers and messaging profiles) |
+| GET | `/api/integrations/telnyx/channels/:id` | | `TelnyxSetupDTO` (number, profile, reply webhook, public key, 10DLC or toll-free status) |
+| POST | `/api/integrations/telnyx/channels/:id/plan` | `TelnyxAction` | `TelnyxPlanDTO`. Changes nothing in Telnyx. |
+| POST | `/api/integrations/telnyx/channels/:id/actions` | `TelnyxAction & { confirm: true }` | `TelnyxSetupDTO`. Without `confirm: true`: 409 `{ error, plan }` and no change. |
 | * | `/api/integrations/resend/*` | | Resend domains and inbound email setup |
 | PATCH | `/api/topics/:id` | `{ muted: boolean }` | `TopicDTO` |
 | POST | `/auth/logout` | | `{ ok: true }` |
@@ -51,5 +54,6 @@ The dashboard talks to the Worker over same-origin JSON under `/api`. The sessio
 | GET | `/media/:id/:name` | Files agents uploaded, for 7 days. The id is 32 random characters. |
 | POST | `/hooks/telegram/:channel` | Telegram updates, checked with a per-channel secret |
 | POST | `/hooks/sms/:delivery/:signature` | Twilio and Telnyx delivery receipts |
-| POST | `/hooks/telnyx/*` | Inbound Telnyx messages |
+| POST | `/hooks/telnyx/:channel/:token` | Inbound Telnyx texts and MMS. Checked with the channel token and the Ed25519 signature. |
+| POST | `/hooks/sms/twilio/:channel/:token` | Inbound Twilio texts and MMS. Checked with the channel token and `X-Twilio-Signature`. |
 | POST | `/hooks/resend/*` | Inbound email from Resend |

@@ -60,6 +60,8 @@ The Gmail channel uses the same client. See [Gmail](/docs/channels/gmail).
 | `ALLOWED_EMAILS` | Yes | The Google accounts that can sign in. |
 | `PUBLIC_URL` | No | The public address of the Worker. Set it when you use a custom domain. |
 | `DEV_LOGIN` | No | `true` shows **Continue as developer** on localhost. Set it in `.dev.vars` only. |
+| `TELNYX_API_URL` | No | Sends Telnyx API calls to this address instead of `https://api.telnyx.com`. For local tests against a mock server. Set it in `.dev.vars` only. |
+| `TWILIO_API_URL` | No | Sends Twilio API calls to this address instead of `https://api.twilio.com`. For local tests against a mock server. Set it in `.dev.vars` only. |
 
 ### ALLOWED_EMAILS
 
@@ -77,7 +79,7 @@ Beep Me builds its links from the address of each request. When `PUBLIC_URL` is 
 
 - The MCP URL and the REST URL that the dashboard shows.
 - The Google redirect URI.
-- The Telegram webhook address and the text message receipt address.
+- The Telegram webhook address, the text message receipt address, and the Telnyx and Twilio reply addresses.
 - The addresses of ntfy answer buttons. Buttons on older notifications keep the old address.
 - The MCP URL that Beep Me binds each OAuth token to.
 
@@ -92,6 +94,8 @@ After the change, do these steps:
 1. In Google Cloud, add `https://beep-me.example.com/auth/google/callback` as a redirect URI.
 2. Reconnect each OAuth agent, for example Claude and Claude Code. Beep Me bound their tokens to the old MCP URL.
 3. Open each Telegram channel. Select **Save changes**. Beep Me then sets the webhook to the new address.
+4. Open each Twilio channel. Select **Save changes**. Beep Me then points the number at the new reply address.
+5. Open each Telnyx channel. Under **Telnyx setup**, select **Send replies to Beep Me**.
 
 Agent tokens that start with `beep_` continue to work after the change.
 

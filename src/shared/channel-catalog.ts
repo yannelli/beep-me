@@ -56,7 +56,7 @@ export const CHANNEL_CATALOG: Record<ChannelKind, ChannelKindInfo> = {
     category: "sms",
     tagline: "Text messages from your Telnyx number.",
     color: "#00C08B",
-    setup: "form",
+    setup: "telnyx",
     keysUrl: "https://portal.telnyx.com/#/api-keys",
     keysLabel: "Open Telnyx API keys",
     isSms: true,
@@ -66,6 +66,13 @@ export const CHANNEL_CATALOG: Record<ChannelKind, ChannelKindInfo> = {
       { key: "from", label: "From number", type: "phone", required: true, placeholder: "+15551234567", help: "Use a Telnyx number that has a messaging profile." },
       { key: "to", label: "Your mobile number", type: "phone", required: true, placeholder: "+15557654321", help: phoneHelp },
       { key: "messagingProfileId", label: "Messaging profile ID", type: "text", placeholder: "Optional", help: "Fill this in only if Telnyx asks for it." },
+      {
+        key: "publicKey",
+        label: "Public key",
+        type: "text",
+        placeholder: "Optional",
+        help: "Needed to get replies. Copy it from Keys & Credentials > Public Key in the Telnyx portal.",
+      },
     ],
   },
   resend: {

@@ -24,6 +24,15 @@ What the adapters in `src/worker/channels/` rely on, checked against each provid
 - Verify: `GET /2010-04-01/Accounts/{AccountSid}.json` returns `friendly_name` and `status`.
 - SMS text (`sms.ts`, used by Twilio and Telnyx) starts with `Beep Me: <agent> (<Priority>, #topic)`. Beep Me converts smart quotes, dashes, "·", "×", and emoji to GSM-7 characters. A GSM-7 text is cut at 306 characters (two 153-character segments). A text with other characters, for example CJK, uses UCS-2 and is cut at 134 characters (two 67-character segments). The link is kept when it fits.
 
+- Outbound MMS: `MediaUrl` repeats, up to 10 per message. JPEG, PNG, and GIF up to 5 MB are resized; other accepted types up to 500 KB; the 5 MB cap covers body and media. MMS reaches the US, Canada, and Australia; to other countries Twilio returns 400 unless MMS Converter is on. Twilio sends GET and HEAD to read `Content-Type`. Sources: https://www.twilio.com/docs/messaging/api/message-resource, https://www.twilio.com/docs/messaging/guides/accepted-mime-types, https://help.twilio.com/articles/360032795214
+- Beep Me sends JPEG, PNG, and GIF only (images first, 10 files, 5 MB), to `+1` and `+61`. Files with no known size count as 0, so a 4xx on a send with media is retried once with every file as a link.
+- Incoming webhook: form encoded `MessageSid`, `SmsSid`, `AccountSid`, `MessagingServiceSid`, `From`, `To`, `Body`, `NumMedia`, `MediaUrl{N}`, `MediaContentType{N}` (N from 0), `OptOutType` (`START`, `STOP`, `HELP`, only with Advanced Opt-Out). Source: https://www.twilio.com/docs/messaging/guides/webhook-request
+- Signature: `X-Twilio-Signature` = Base64 HMAC-SHA1 (key: Auth Token) of the full URL (scheme, port, query) followed by each POST parameter name and value, sorted by name, no delimiters. Source: https://www.twilio.com/docs/usage/security
+- Inbound media URL: `https://api.twilio.com/2010-04-01/Accounts/AC…/Messages/MM…/Media/ME…`. HTTP Basic auth is enforced on new accounts since 2023-06-08; the fetch redirects to a `mms.twiliocdn.com` URL valid for 4 hours. Beep Me sends Basic auth to the Twilio host only and follows the redirect without it. Sources: https://www.twilio.com/docs/messaging/api/media-resource, https://www.twilio.com/en-us/changelog/upcoming-security-changes-enforcing-http-authentication-for-media
+- Inbound URL: `GET /IncomingPhoneNumbers.json?PhoneNumber=` then `POST /IncomingPhoneNumbers/{PN…}.json` with `SmsUrl`, `SmsMethod=POST`. `SmsApplicationSid` overrides `SmsUrl`. In a Messaging Service, the service `inbound_request_url` wins unless `use_inbound_webhook_on_number=true`. Sources: https://www.twilio.com/docs/phone-numbers/api/incomingphonenumber-resource, https://www.twilio.com/docs/messaging/api/service-resource
+- Keywords: opt-out `STOP`, `STOPALL`, `UNSUBSCRIBE`, `CANCEL`, `END`, `REVOKE`, `OPTOUT`, `QUIT` (single word, still forwarded); opt-in `START`, `YES`, `UNSTOP` (forwarded); help `HELP`, `INFO` (forwarded only with Advanced Opt-Out). Beep Me records `YES` as a reply. Source: https://help.twilio.com/articles/223134027
+- No-reply response: empty `<Response></Response>` with `text/xml`. Source: https://www.twilio.com/docs/usage/webhooks/messaging-webhooks
+
 ## Telnyx Messaging
 
 - Source: https://developers.telnyx.com/api-reference/messages/send-a-message, https://developers.telnyx.com/api-reference/messaging-profiles/list-messaging-profiles
@@ -31,6 +40,16 @@ What the adapters in `src/worker/channels/` rely on, checked against each provid
 - Response: `data.id` (UUID). Errors: `{ errors: [{ code (string), title, detail?, source?, meta? }] }`.
 - `messaging_profile_id` is required for number pool or alphanumeric senders.
 - Verify: `GET /v2/messaging_profiles?page[size]=1`. `GET /v2/balance` also works but returns 403 (code 10010) for keys without billing access.
+- Facts below come from the Telnyx OpenAPI spec (https://raw.githubusercontent.com/team-telnyx/openapi/master/openapi/spec3.json, server `https://api.telnyx.com/v2`) and the guides named per line, read 2026-11-18.
+- Outbound MMS: `media_urls` (up to 10, error 42204), optional `subject`. MMS reaches US and Canada long code, toll-free, and short code. Types: JPEG, PNG, GIF, BMP, TIFF, WebP, MP4, 3GP, MOV, MP3, WAV, AMR, OGG, PDF, vCard, iCal. Source: https://developers.telnyx.com/docs/messaging/messages/mms-transcoding
+- Inbound `message.received`: `data.payload` has `id`, `direction`, `type` (`SMS`/`MMS`), `text` (null for media only), `from.phone_number`, `to[].phone_number`, `media[]` (`url`, `content_type`, `size`, `sha256`), `autoresponse_type` on keyword messages. Source: https://developers.telnyx.com/docs/messaging/messages/receiving-webhooks
+- Signature: `telnyx-signature-ed25519` (Base64) over `<telnyx-timestamp>|<raw body>`; the public key is a Base64 raw 32-byte Ed25519 key from Keys & Credentials > Public Key in the portal. Reject timestamps older than 5 minutes. No API returns the public key, so the user pastes it.
+- Inbound media URLs need `Authorization: Bearer <API key>` and expire after 30 days. Source: https://developers.telnyx.com/docs/messaging/messages/receive-message
+- Keywords: opt-out `STOP`, `STOPALL`, `STOP ALL`, `UNSUBSCRIBE`, `CANCEL`, `END`, `QUIT`; opt-in `START`, `UNSTOP`. They still arrive as `message.received`. Source: https://developers.telnyx.com/docs/messaging/messages/advanced-opt-in-out
+- Numbers: `GET /phone_numbers/messaging` (`page[size]` up to 250, `filter[phone_number]`) returns `id`, `phone_number`, `messaging_profile_id`, `type` (`long-code`, `toll-free`, `short-code`, and forms without dashes). Assign: `PATCH /phone_numbers/{id}/messaging` with `messaging_profile_id`; `{id}` is the number id from that list.
+- Profiles: `GET /messaging_profiles` (`page[size]` up to 250); `POST /messaging_profiles` requires `name` and `whitelisted_destinations` (ISO codes or `["*"]`); `PATCH /messaging_profiles/{id}` takes `webhook_url` and `webhook_api_version` (`"1"`, `"2"`, `"2010-04-01"`).
+- 10DLC under `/v2/10dlc`: `GET /phone_number_campaigns/{phoneNumber}` (`campaignId`, `brandId`, `assignmentStatus`: `ASSIGNED`, `PENDING_ASSIGNMENT`, `FAILED_ASSIGNMENT`, `PENDING_UNASSIGNMENT`, `FAILED_UNASSIGNMENT`, `failureReasons`); `POST /phone_number_campaigns` `{ phoneNumber, campaignId }`; `GET /brand` and `GET /campaign?brandId=` (required) return `{ records, page, totalRecords }`; `GET /brand/{id}` returns the brand without a `data` wrapper (`displayName`, `companyName`, `status`, `identityStatus`); `GET /campaign/{id}` returns `usecase`, `description`, `campaignStatus`.
+- Toll-free: `GET /messaging_tollfree/verification/requests?phone_number=&page=&page_size=` (page and page_size required) returns `{ records, total_records }` with `verificationStatus` (`Verified`, `Rejected`, `Waiting For Vendor`, `Waiting For Customer`, `Waiting For Telnyx`, `In Progress`) and `reason`.
 
 ## Resend
 
@@ -112,7 +131,12 @@ What the adapters in `src/worker/channels/` rely on, checked against each provid
 - Telegram error text for a deleted forum topic. The adapter treats `thread not found`, `TOPIC_DELETED`, `TOPIC_ID_INVALID` and `topic not found` in `description` as a missing thread.
 - The Bot API version that added private-chat topics (the brief says 9.4). The local 10.4 copy confirms the feature and does not say which version added it.
 - Discord: that the `thread_name` response has `channel_id` equal to the new thread id (the docs say the starter message has the thread's id; the adapter stores `channel_id`, then `id`). Which code a locked or deleted thread returns (the adapter recreates on 10003 and 50083).
-- Telnyx text length limit (the response allows 1 to 25 parts).
+- Telnyx text length limit. Error 42202 says 1,600 characters; the encoding guide says 10 segments.
+- Telnyx MMS size. The spec says less than 1 MB in total, error 42205 says 1 MB per file and 2 MB in total, and the transcoding guide lists carrier limits down to 600 KB. Beep Me uses 1 MB in total and retries with links on a 4xx.
+- The host of Telnyx inbound media URLs. Beep Me sends the API key only to `telnyx.com` hosts and follows redirects without it.
+- Whether `PATCH /phone_numbers/{id}/messaging` takes an E.164 number as `{id}`. Beep Me sends the number id.
+- Whether Twilio accepts 204 from an incoming message webhook without a 12200 or 12300 warning. Beep Me returns empty TwiML.
+- Twilio media retention: the docs say until deleted, the Help Center says 13 months.
 - Resend error JSON shape (`{ statusCode, message, name }` is not shown in the docs).
 - Gmail API maximum message size.
 - Discord: the maximum number of files per message (the adapter sends at most 10) and the maximum total request size (the adapter keeps the upload at 20 MiB or less, then falls back to links on 413, 40005, or 50045).

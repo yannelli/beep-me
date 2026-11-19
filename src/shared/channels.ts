@@ -34,7 +34,7 @@ export interface ChannelField {
 }
 
 /** How the add-channel sheet sets the channel up. */
-export type ChannelSetup = "form" | "telegram" | "gmail";
+export type ChannelSetup = "form" | "telegram" | "gmail" | "telnyx";
 
 export interface ChannelKindInfo {
   kind: ChannelKind;

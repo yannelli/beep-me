@@ -1,9 +1,9 @@
-Telnyx sends Beep Me messages as text messages (SMS) from your Telnyx number to your mobile phone. With automatic routes, Urgent and High messages go to your first text message channel. Beep Me keeps each text within two SMS segments.
+Telnyx sends Beep Me messages as text messages (SMS or MMS) from your Telnyx number to your mobile phone. You can text back to answer an agent. With automatic routes, Urgent and High messages go to your first text message channel. Beep Me keeps each text within two SMS segments.
 
 ## Before you start
 
 - A Telnyx account. Sign up at [telnyx.com](https://telnyx.com/).
-- A Telnyx phone number that can send SMS. The number must belong to a messaging profile.
+- A Telnyx phone number that can send SMS.
 - Your mobile number in international format, for example `+15557654321`.
 - For texts to US numbers: a registered 10DLC brand and campaign, or a verified toll-free number. See [US registration](#us-registration).
 
@@ -11,23 +11,28 @@ Telnyx sends Beep Me messages as text messages (SMS) from your Telnyx number to 
 
 <Steps>
 
-### Assign your number to a messaging profile
-
-In the [Telnyx portal](https://portal.telnyx.com/), create a messaging profile. Assign your phone number to that profile.
-
 ### Create an API key
 
 Open [API keys](https://portal.telnyx.com/#/api-keys) in the Telnyx portal. Create a key. Copy the key.
 
-### Register for US texts
+### Pick your number in Beep Me
 
-Skip this step if you send only to numbers outside the US. For US numbers, complete the registration that your number type needs. See [US registration](#us-registration).
+Open [Channels](/channels). Select **Add channel**. Select **Telnyx SMS**. Paste the key in **API key**. Select **Find my numbers**.
 
-### Add the channel in Beep Me
+Select the number to send from. Fill in **Your mobile number**. Select **Add channel**.
 
-Open [Channels](/channels). Select **Add channel**. Select **Telnyx SMS**. Fill in **API key**, **From number**, and **Your mobile number**. Select **Add channel**.
+To skip the list, select **Enter the details yourself** and fill in the form.
 
-Beep Me checks the API key with Telnyx. It shows an error if Telnyx does not accept the key.
+### Finish the Telnyx setup
+
+The **Telnyx setup** panel checks your number and offers a fix for each problem:
+
+- **Messaging profile.** Telnyx needs one to send texts. Select a profile and **Use this profile**, or select **Create a profile for Beep Me**.
+- **Replies.** Select **Send replies to Beep Me** to set the inbound webhook URL of the messaging profile to Beep Me.
+- **Public key.** Copy it from **Keys & Credentials > Public Key** in the Telnyx portal. Paste it and select **Save key**. Beep Me uses it to check that each reply comes from Telnyx.
+- **US registration.** The panel shows your 10DLC brand, campaign, and status, or your toll-free verification status. See [US registration](#us-registration).
+
+Beep Me shows each change to your Telnyx account first. Nothing changes until you select **Make changes**. The panel stays on the channel page.
 
 ### Send a test
 
@@ -50,13 +55,37 @@ Leave **Messaging profile ID** empty unless Telnyx asks for it. See [Send a mess
 ## How messages look
 
 ```text
-Beep Me: Claude Code (High, #api)
-Deploy failed
-The migration step timed out after 10 minutes.
+Beep Me: Cat Design Project (Claude Code) (High, #api)
+Ship the redesign?
+Preview is attached. Staging passed.
 https://example.com/run/42
+Reply with a number: 1) Ship it 2) Wait until Monday
 ```
 
-The first line shows the agent name, the priority, and the topic. The title, the body, and the link follow.
+The first line shows the sender name when the agent sets one, the agent name, the priority, and the topic. The title, the body, and the link follow. A question ends with the choices, or with "Reply to this message to answer."
+
+## Files
+
+Beep Me sends images and other files as MMS to US and Canadian numbers (`+1`). It sends images first, up to 10 files and less than 1 MB in total, which is the Telnyx limit. Telnyx takes JPEG, PNG, GIF, BMP, TIFF, and WebP images, MP4, 3GP, and MOV video, MP3, WAV, AMR, and OGG audio, PDF, vCard, and iCalendar files.
+
+Other files, files over the limit, and files to numbers outside `+1` arrive as links in the text. Each file must be at a public `https://` address. Files that an agent uploads have one on an `https://` deployment.
+
+If Telnyx refuses the MMS, Beep Me sends the text again with every file as a link. The [delivery log](/docs/routing/delivery-log) then shows `Sent the files as links. MMS failed: ...`.
+
+## Replies
+
+Text the Beep Me number from your mobile number to answer. Beep Me connects the text to the newest message that it sent to you in the last 24 hours. It prefers a message that asked a question.
+
+- A number, such as `2`, picks that choice. The exact text of a choice also works, for example `ship it`.
+- Any other text is a reply. A number with no matching choice is also a reply.
+- Photos and other files that you send by MMS arrive with the reply. Telnyx keeps them for 30 days.
+- A text that does not match a message still shows in [Activity](/).
+
+The agent reads answers with `get_replies`. See [Replies](/docs/agents/replies).
+
+Beep Me ignores texts from other numbers and the carrier keywords that Telnyx answers itself: `STOP`, `STOPALL`, `UNSUBSCRIBE`, `CANCEL`, `END`, `QUIT`, `HELP`, `INFO`, `START`, and `UNSTOP`. If a choice is one of these words, text its number instead.
+
+Replies need an `https://` deployment and a saved public key. On `http://localhost`, the panel shows the reply address, but Telnyx cannot reach it.
 
 ### Length and characters
 
@@ -65,7 +94,7 @@ Beep Me keeps each text within two SMS segments:
 - Beep Me changes characters that the GSM-7 SMS alphabet does not have. Curly quotes become straight quotes. Dashes, `·`, and `•` become `-`. `…` becomes `...`, and `×` becomes `x`. Beep Me removes emoji.
 - When the whole text uses GSM-7, the limit is 306 units (two segments of 153). The characters `^ { } \ [ ~ ] |` and `€` use two units each.
 - When the text has other characters, such as Chinese or Cyrillic letters, the limit is 134 characters (two segments of 67).
-- A longer text ends with `...`. Beep Me keeps the link complete when the link uses half of the limit or less.
+- A longer text ends with `...`. Beep Me cuts the body first. It keeps the choices, the link, and the file links complete while they use two thirds of the limit or less.
 
 ## US registration
 
@@ -73,6 +102,8 @@ You must register before you send texts to US numbers:
 
 - For a 10-digit number (10DLC), register a brand and a campaign. Telnyx says that since February 3, 2025, it blocks all unregistered 10DLC traffic. See the [Telnyx 10DLC FAQ](https://support.telnyx.com/en/articles/3679260-frequently-asked-questions-about-10dlc) and [Getting started with 10DLC](https://developers.telnyx.com/docs/messaging/10dlc).
 - For a toll-free number, submit toll-free verification in the Telnyx portal. See the [10DLC and toll-free compliance guide](https://support.telnyx.com/en/collections/3147004-10dlc-and-toll-free-text-messaging-compliance-guide).
+
+The **Telnyx setup** panel shows the brand, the campaign, and the assignment status of a 10DLC number. If the number has no campaign, select one of your campaigns and **Assign number**. Telnyx then sends the assignment to the carriers, which can take a few days. A brand or a campaign needs business details and fees, so you create them in the [Telnyx portal](https://portal.telnyx.com/). For a toll-free number, the panel shows the verification status.
 
 ## Text cap
 
@@ -97,8 +128,12 @@ Beep Me shows Telnyx errors as `Telnyx <code>: <title>: <detail>`, with the text
 | "Paste the full API key." | Copy the whole key again from the API keys page. |
 | "Use international format, like +15551234567." | Enter the number with a `+` and the country code. |
 | A Telnyx error when you save | Telnyx does not accept the API key. Create a new key. Paste it in **API key**. |
-| A Telnyx error that names the messaging profile | Assign the **From number** to a messaging profile. If Telnyx asks for it, fill in **Messaging profile ID**. |
-| The text fails to a US number | Check your 10DLC or toll-free registration in the Telnyx portal. |
+| A Telnyx error that names the messaging profile | In **Telnyx setup**, assign the number to a messaging profile. If Telnyx asks for it, fill in **Messaging profile ID**. |
+| "Paste the public key from Keys & Credentials in the Telnyx portal." | Copy the whole public key again. It has 44 characters and ends with `=`. |
+| "... is not a messaging number in this Telnyx account." | Check **From number**. The API key must belong to the account that owns the number. |
+| The text fails to a US number | Check your 10DLC or toll-free registration in **Telnyx setup**. |
+| Replies do not arrive | In **Telnyx setup**, check that replies come back to Beep Me and that the public key is saved. Text from the number in **Your mobile number**. |
+| `Sent the files as links. MMS failed: ...` | Telnyx refused the files. Send smaller files, less than 1 MB in total. |
 | "Text limit reached" | The agent reached its text cap. Wait, or raise the cap on the agent's page. |
 
 For other problems, see [Troubleshooting](/docs/reference/troubleshooting).

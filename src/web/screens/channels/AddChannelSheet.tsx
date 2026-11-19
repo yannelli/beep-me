@@ -14,8 +14,10 @@ import { useToast } from "../../lib/toast";
 import { ChannelForm } from "./ChannelForm";
 import { ChannelTests } from "./ChannelTests";
 import { TelegramLink } from "./TelegramLink";
+import { TelnyxConnect } from "./TelnyxConnect";
+import { TelnyxSetup } from "./TelnyxSetup";
 
-type Step = { name: "pick" } | { name: "gmail" } | { name: "form"; kind: ChannelKind } | { name: "created"; channel: ChannelDTO };
+type Step = { name: "pick" } | { name: "gmail" } | { name: "form"; kind: ChannelKind; manual?: boolean } | { name: "created"; channel: ChannelDTO };
 
 const categoryOrder: ChannelCategory[] = ["push", "chat", "sms", "email", "developer"];
 
@@ -80,6 +82,7 @@ function Created({ channel, onDone }: { channel: ChannelDTO; onDone: () => void 
           <CopyField value={String(channel.config.topic ?? "")} label="topic" />
         </div>
       )}
+      {channel.kind === "telnyx" && <TelnyxSetup channel={channel} />}
       <p className="text-sm text-muted">{copy.channels.createdBody}</p>
       <ChannelTests channel={channel} primary />
       <Button className="w-full" onClick={onDone}>
@@ -151,7 +154,10 @@ export function AddChannelSheet({ open, onClose }: { open: boolean; onClose: () 
         </div>
       )}
       {step.name === "gmail" && <GmailChoice onAppPassword={() => setStep({ name: "form", kind: "gmail" })} />}
-      {step.name === "form" && (
+      {step.name === "form" && step.kind === "telnyx" && !step.manual && (
+        <TelnyxConnect busy={busy} errors={errors} onSubmit={(body) => void create("telnyx", body)} onManual={() => setStep({ name: "form", kind: "telnyx", manual: true })} />
+      )}
+      {step.name === "form" && (step.kind !== "telnyx" || step.manual) && (
         <div className="space-y-4">
           <ChannelForm
             key={step.kind}

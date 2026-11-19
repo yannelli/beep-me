@@ -170,6 +170,10 @@ The detail is, for example, `Beep Me could not send to Telegram. Check the Worke
 
 Delivery receipts need an `https` deployment. On `http://localhost`, Beep Me does not ask the provider for receipts.
 
+### Text replies do not arrive
+
+Replies need an `https` deployment. For Telnyx, open the channel and check **Telnyx setup**: replies must come back to Beep Me, and the public key must be saved. For Twilio, the channel shows whether replies are on. See [Telnyx](/docs/channels/telnyx#replies) and [Twilio](/docs/channels/twilio#replies).
+
 ## Local development
 
 ### The Telegram chat does not link
