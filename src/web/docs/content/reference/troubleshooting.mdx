@@ -9,13 +9,13 @@ For any message, open it in **Activity**. The notes and the delivery details exp
 Every page shows **Finish setup** and this text:
 
 ```text
-Set APP_SECRET to a random value of 32 or more characters: npx wrangler secret put APP_SECRET
+Set APP_SECRET to a random value of 32 or more characters: bunx wrangler secret put APP_SECRET
 ```
 
 `APP_SECRET` is missing or shorter than 32 characters. Run this command:
 
 ```sh
-openssl rand -hex 32 | npx wrangler secret put APP_SECRET
+openssl rand -hex 32 | bunx wrangler secret put APP_SECRET
 ```
 
 ### "Set up Google sign-in"
@@ -23,11 +23,11 @@ openssl rand -hex 32 | npx wrangler secret put APP_SECRET
 The sign-in page shows **Set up Google sign-in** in place of **Continue with Google**. The Worker does not have `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`.
 
 1. Follow the steps on the sign-in page. The page shows the redirect URI for this deployment.
-2. Run `npx wrangler secret put GOOGLE_CLIENT_ID`.
-3. Run `npx wrangler secret put GOOGLE_CLIENT_SECRET`.
-4. Run `npm run deploy`. Then reload the page.
+2. Run `bunx wrangler secret put GOOGLE_CLIENT_ID`.
+3. Run `bunx wrangler secret put GOOGLE_CLIENT_SECRET`.
+4. Run `bun run deploy`. Then reload the page.
 
-You can also run `npm run setup` again. It asks for the allowed emails again. It also asks for the Google client ID and secret when they are missing.
+You can also run `bun run setup` again. It asks for the allowed emails again. It also asks for the Google client ID and secret when they are missing.
 
 ### Google shows a redirect URI error
 
@@ -43,7 +43,7 @@ If you use a custom domain, set `PUBLIC_URL` and use that domain in the URI. See
 
 The page says **Sign-in did not finish** and `you@example.com is not allowed to sign in to this Beep Me.`
 
-Your account is not in `ALLOWED_EMAILS`. Add it to the list in `wrangler.jsonc`, then run `npm run deploy`. If the list is empty, only the first account that signed in can use Beep Me. See [ALLOWED_EMAILS](/docs/reference/configuration#allowed_emails).
+Your account is not in `ALLOWED_EMAILS`. Add it to the list in `wrangler.jsonc`, then run `bun run deploy`. If the list is empty, only the first account that signed in can use Beep Me. See [ALLOWED_EMAILS](/docs/reference/configuration#allowed_emails).
 
 ### "This sign-in link expired. Start again from Beep Me."
 
@@ -152,7 +152,7 @@ The Gmail channel cannot get a new access token. If your Google app is in Testin
 
 ### "Beep Me could not send to"
 
-The detail is, for example, `Beep Me could not send to Telegram. Check the Worker logs.` The channel code hit an unexpected error. Run `npx wrangler tail` and send a test to see the error.
+The detail is, for example, `Beep Me could not send to Telegram. Check the Worker logs.` The channel code hit an unexpected error. Run `bunx wrangler tail` and send a test to see the error.
 
 ### Text messages stay at "sent"
 
@@ -168,7 +168,7 @@ If the same bot also runs on a deployed Beep Me, it has a webhook. Telegram does
 
 ### "Continue as developer" does not show
 
-The button shows only when `DEV_LOGIN=true` is in `.dev.vars` and the address is `localhost`, `127.0.0.1`, or `[::1]`. Restart `npm run dev` after you change `.dev.vars`.
+The button shows only when `DEV_LOGIN=true` is in `.dev.vars` and the address is `localhost`, `127.0.0.1`, or `[::1]`. Restart `bun run dev` after you change `.dev.vars`.
 
 ## Next steps
 

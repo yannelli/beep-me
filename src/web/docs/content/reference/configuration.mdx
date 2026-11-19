@@ -2,12 +2,12 @@ This page lists every secret, variable, and binding that Beep Me reads. It also 
 
 ## Secrets
 
-Set secrets with Wrangler. `npm run setup` sets all three for you.
+Set secrets with Wrangler. `bun run setup` sets all three for you.
 
 ```sh
-npx wrangler secret put APP_SECRET
-npx wrangler secret put GOOGLE_CLIENT_ID
-npx wrangler secret put GOOGLE_CLIENT_SECRET
+bunx wrangler secret put APP_SECRET
+bunx wrangler secret put GOOGLE_CLIENT_ID
+bunx wrangler secret put GOOGLE_CLIENT_SECRET
 ```
 
 | Name | Required | Purpose |
@@ -21,7 +21,7 @@ npx wrangler secret put GOOGLE_CLIENT_SECRET
 Make a random value with this command:
 
 ```sh
-openssl rand -hex 32 | npx wrangler secret put APP_SECRET
+openssl rand -hex 32 | bunx wrangler secret put APP_SECRET
 ```
 
 If `APP_SECRET` is missing or shorter than 32 characters, every page shows **Finish setup**. The page tells you to set the secret.
@@ -44,7 +44,7 @@ The Gmail channel uses the same client. See [Gmail](/docs/channels/gmail).
 
 ## Variables
 
-Set variables in `vars` in `wrangler.jsonc`. Then deploy again with `npm run deploy`.
+Set variables in `vars` in `wrangler.jsonc`. Then deploy again with `bun run deploy`.
 
 ```jsonc title="wrangler.jsonc"
 "vars": {
@@ -67,7 +67,7 @@ Set variables in `vars` in `wrangler.jsonc`. Then deploy again with `npm run dep
 | `*` | Any Google account. Each account gets its own channels, agents, and messages. |
 | Empty | Only the first account that signs in. After that account exists, Beep Me refuses all other accounts. |
 
-`npm run setup` asks for this value and writes it to `wrangler.jsonc`.
+`bun run setup` asks for this value and writes it to `wrangler.jsonc`.
 
 ### PUBLIC_URL
 
@@ -84,7 +84,7 @@ Omit the trailing slash. Beep Me removes it if you add one.
 
 1. Add the custom domain to the Worker in Cloudflare. See [Custom Domains](https://developers.cloudflare.com/workers/configuration/routing/custom-domains/) in the Cloudflare docs.
 2. Set `PUBLIC_URL` to the new address, for example `https://beep-me.example.com`.
-3. Run `npm run deploy`.
+3. Run `bun run deploy`.
 4. In Google Cloud, add `https://beep-me.example.com/auth/google/callback` as a redirect URI.
 5. Reconnect each OAuth agent, for example Claude and Claude Code. Beep Me bound their tokens to the old MCP URL.
 6. Open each Telegram channel. Select **Save changes**. Beep Me then sets the webhook to the new address.
@@ -93,7 +93,7 @@ Agent tokens that start with `beep_` continue to work after the change.
 
 ## Bindings
 
-`npm run setup` creates these resources and writes their IDs to `wrangler.jsonc`.
+`bun run setup` creates these resources and writes their IDs to `wrangler.jsonc`.
 
 | Binding | Type | Name | Holds |
 | --- | --- | --- | --- |
@@ -109,7 +109,7 @@ The schema is in `migrations/0001_init.sql`. The Worker applies it on the first 
 You can also apply the schema yourself:
 
 ```sh
-npx wrangler d1 migrations apply beep-me --remote
+bunx wrangler d1 migrations apply beep-me --remote
 ```
 
 ## Data retention

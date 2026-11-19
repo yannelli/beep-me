@@ -11,9 +11,9 @@ The docs site is part of the dashboard app. It is public at `/docs` on every Bee
 | `src/web/docs/nav.ts` | The sidebar. Each page's slug, title, and one-sentence description. The page title and description come from here. |
 | `src/web/docs/content/<slug>.mdx` | One page. The `/docs` home page is `content/index.mdx`. `/docs/channels/telegram` is `content/channels/telegram.mdx`. |
 | `src/web/docs/components/` | The components that MDX pages can use. |
-| `scripts/check-docs.mjs` | `npm run check:docs`. Finds missing pages, unknown components, dashes, and broken links. |
+| `scripts/check-docs.mjs` | `bun run check:docs`. Finds missing pages, unknown components, dashes, and broken links. |
 
-To add a page: add it to `nav.ts`, create the MDX file, and run `npm run check:docs`.
+To add a page: add it to `nav.ts`, create the MDX file, and run `bun run check:docs`.
 
 ## Page shape
 

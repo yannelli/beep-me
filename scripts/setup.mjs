@@ -16,7 +16,7 @@ const step = (n, text) => console.log(`\n${bold(`${n}.`)} ${bold(text)}`);
 const rl = createInterface({ input: stdin, output: stdout });
 
 function wrangler(args, { input, inherit = false } = {}) {
-  const result = spawnSync("npx", ["wrangler", ...args], {
+  const result = spawnSync("bunx", ["wrangler", ...args], {
     encoding: "utf8",
     input,
     stdio: inherit ? "inherit" : ["pipe", "pipe", "pipe"],
@@ -89,7 +89,7 @@ function deploy(secrets) {
   const file = join(tmpdir(), `beep-me-secrets-${randomBytes(6).toString("hex")}.json`);
   writeFileSync(file, JSON.stringify(secrets), { mode: 0o600 });
   try {
-    execFileSync("npm", ["run", "build"], { stdio: "inherit", shell: process.platform === "win32" });
+    execFileSync("bun", ["run", "build"], { stdio: "inherit", shell: process.platform === "win32" });
     const args = ["deploy", ...(Object.keys(secrets).length ? ["--secrets-file", file] : [])];
     const out = wrangler(args);
     console.log(dim(out.trim().split("\n").slice(-6).join("\n")));
@@ -141,7 +141,7 @@ async function main() {
       wrangler(["secret", "bulk"], { input: JSON.stringify({ GOOGLE_CLIENT_ID: clientId, GOOGLE_CLIENT_SECRET: clientSecret }) });
       console.log(green("✓ Google client saved"));
     } else {
-      console.log("Skipped. Run npm run setup again when you have the client ID and secret.");
+      console.log("Skipped. Run bun run setup again when you have the client ID and secret.");
     }
   }
 

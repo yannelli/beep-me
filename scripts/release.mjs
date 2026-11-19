@@ -85,8 +85,7 @@ function main() {
   const changelog = readFileSync("CHANGELOG.md", "utf8");
   const marker = changelog.indexOf("\n## ");
   writeFileSync("CHANGELOG.md", marker < 0 ? `${changelog.trimEnd()}\n\n${section}` : `${changelog.slice(0, marker + 1)}${section}\n${changelog.slice(marker + 1)}`);
-  run("npm", ["install", "--package-lock-only", "--ignore-scripts", "--no-audit", "--no-fund"]);
-  git("add", "package.json", "package-lock.json", "CHANGELOG.md");
+  git("add", "package.json", "CHANGELOG.md");
   git("commit", "-m", `chore(release): v${version}`);
   git("tag", "-a", `v${version}`, "-m", `v${version}`);
   git("push", "origin", "main", `v${version}`);

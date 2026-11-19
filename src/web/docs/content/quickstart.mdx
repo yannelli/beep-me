@@ -4,7 +4,8 @@ Deploy Beep Me to your Cloudflare account, get a test message on your phone, and
 
 You need:
 
-- Node.js 22 or later.
+- Node.js 24 or later.
+- [Bun](https://bun.sh) 1.2 or later.
 - A Cloudflare account.
 - A Google account. You sign in to Beep Me with it, and you create the sign-in client in Google Cloud.
 - Your phone.
@@ -20,13 +21,13 @@ Clone the repository and install the packages:
 ```sh
 git clone https://github.com/yannelli/beep-me.git beep-me
 cd beep-me
-npm install
+bun install
 ```
 
 ### Run the setup script
 
 ```sh
-npm run setup
+bun run setup
 ```
 
 The script does these steps:
@@ -110,8 +111,8 @@ The message arrives on your phone. Open **Activity** in Beep Me to see it with t
 
 | What you see | What to do |
 | --- | --- |
-| **Finish setup** | `APP_SECRET` is missing. Run `npm run setup` again. |
-| **Set up Google sign-in** | The Google secrets are missing. Run `npm run setup` again. Paste them at the prompts. |
+| **Finish setup** | `APP_SECRET` is missing. Run `bun run setup` again. |
+| **Set up Google sign-in** | The Google secrets are missing. Run `bun run setup` again. Paste them at the prompts. |
 | A redirect URI error from Google | Check that the URI in Google is your Worker URL with `/auth/google/callback` at the end. |
 | `is not allowed to sign in to this Beep Me` | Your email is not in `ALLOWED_EMAILS`. See [Configuration](/docs/reference/configuration#allowed_emails). |
 

@@ -8,9 +8,9 @@ What changed and why. Use a Conventional Commits title, for example `fix(telegra
 
 ## Verification
 
-- [ ] `npm run typecheck`
-- [ ] `npm run check:docs`
-- [ ] `npm run build`
+- [ ] `bun run typecheck`
+- [ ] `bun run check:docs`
+- [ ] `bun run build`
 - [ ] Docs pages updated for changed behavior
 
 ## Follow-ups

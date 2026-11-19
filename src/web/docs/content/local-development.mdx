@@ -6,10 +6,10 @@ Run Beep Me on your computer to change the Worker, the dashboard, or these docs.
 
 ### Install the packages
 
-You need Node.js 22 or later.
+You need Node.js 24 or later and [Bun](https://bun.sh) 1.2 or later. Bun installs the packages and runs the scripts. Vite and Wrangler run on Node.js.
 
 ```sh
-npm install
+bun install
 ```
 
 ### Create the local secrets file
@@ -40,7 +40,7 @@ GOOGLE_CLIENT_SECRET=
 ### Start the server
 
 ```sh
-npm run dev
+bun run dev
 ```
 
 Vite runs the dashboard. The Cloudflare Vite plugin runs the Worker in workerd, the Workers runtime, on the same address.
@@ -77,7 +77,7 @@ Developer sign-in is enough for most work. To test Google sign-in or the Gmail c
 
 1. In your Google OAuth client, add `http://localhost:5173/auth/google/callback` as a redirect URI.
 2. Put the client ID and secret in `.dev.vars`.
-3. Restart `npm run dev`.
+3. Restart `bun run dev`.
 
 When both Google values are set, the sign-in page shows **Continue with Google** and **Continue as developer**.
 
@@ -134,14 +134,14 @@ curl -d "Hello from localhost" -H "Authorization: Bearer $BEEPME_TOKEN" http://l
 
 | Command | What it does |
 | --- | --- |
-| `npm run dev` | Runs the Worker and the dashboard on `http://localhost:5173`, with reload on save. |
-| `npm run typecheck` | Type-checks the Worker, the dashboard, and the Vite config. |
-| `npm run types` | Generates `worker-configuration.d.ts`. Run it after you change `wrangler.jsonc`. |
-| `npm run build` | Builds the Worker and the dashboard into `dist/`. |
-| `npm run preview` | Builds, then serves the build on your computer. |
-| `npm run check:docs` | Checks the docs pages for missing files, unknown components, dashes, and broken links. |
-| `npm run deploy` | Builds and deploys with Wrangler. |
-| `npm run setup` | Runs the guided first deploy. |
+| `bun run dev` | Runs the Worker and the dashboard on `http://localhost:5173`, with reload on save. |
+| `bun run typecheck` | Type-checks the Worker, the dashboard, and the Vite config. |
+| `bun run types` | Generates `worker-configuration.d.ts`. Run it after you change `wrangler.jsonc`. |
+| `bun run build` | Builds the Worker and the dashboard into `dist/`. |
+| `bun run preview` | Builds, then serves the build on your computer. |
+| `bun run check:docs` | Checks the docs pages for missing files, unknown components, dashes, and broken links. |
+| `bun run deploy` | Builds and deploys with Wrangler. |
+| `bun run setup` | Runs the guided first deploy. |
 
 ## Project layout
 

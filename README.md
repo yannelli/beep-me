@@ -23,12 +23,12 @@ Beep Me lets every AI agent you run send you a message: a text, a Telegram messa
 
 ## Deploy in about 3 minutes
 
-You need Node 22 or later, a Cloudflare account, and a Google account.
+You need [Node.js](https://nodejs.org) 24 or later, [Bun](https://bun.sh) 1.2 or later, a Cloudflare account, and a Google account.
 
 ```sh
 git clone https://github.com/yannelli/beep-me.git && cd beep-me
-npm install
-npm run setup
+bun install
+bun run setup
 ```
 
 The setup script does these steps:
@@ -50,22 +50,22 @@ Then do these steps on your phone:
 <summary>Manual setup</summary>
 
 ```sh
-npx wrangler d1 create beep-me            # copy database_id into wrangler.jsonc
-npx wrangler kv namespace create beep-me-oauth   # copy id into the OAUTH_KV binding
-npm run deploy
-openssl rand -hex 32 | npx wrangler secret put APP_SECRET
+bunx wrangler d1 create beep-me            # copy database_id into wrangler.jsonc
+bunx wrangler kv namespace create beep-me-oauth   # copy id into the OAUTH_KV binding
+bun run deploy
+openssl rand -hex 32 | bunx wrangler secret put APP_SECRET
 ```
 
 Until `APP_SECRET` is set, the Worker shows a setup page. Create a Google OAuth client at https://console.cloud.google.com/auth/clients/create (type: Web application). Add the redirect URI `https://<your-worker>/auth/google/callback`. Then save the client ID and the client secret:
 
 ```sh
-npx wrangler secret put GOOGLE_CLIENT_ID
-npx wrangler secret put GOOGLE_CLIENT_SECRET
+bunx wrangler secret put GOOGLE_CLIENT_ID
+bunx wrangler secret put GOOGLE_CLIENT_SECRET
 ```
 
 Set `ALLOWED_EMAILS` in `wrangler.jsonc` to a comma-separated list of Google accounts. Use `*` to let any account sign up. If the list is empty, only the first account that signs in can use Beep Me.
 
-The Worker applies the database schema on the first request. `npx wrangler d1 migrations apply beep-me --remote` also works.
+The Worker applies the database schema on the first request. `bunx wrangler d1 migrations apply beep-me --remote` also works.
 </details>
 
 ### Settings
@@ -127,24 +127,24 @@ Until you edit routes, they follow your channels: texts for urgent and high, the
 
 Every deployment serves its own docs at `/docs`, for example `https://beep-me.<you>.workers.dev/docs`. Readers do not need to sign in. The docs cover setup, each agent client, each channel, routing, and the MCP and REST reference. Code examples show the address of the deployment you read them on.
 
-To add or change a page, read [docs/docs-site.md](docs/docs-site.md) and run `npm run check:docs`.
+To add or change a page, read [docs/docs-site.md](docs/docs-site.md) and run `bun run check:docs`.
 
 ## Local development
 
 ```sh
 cp .dev.vars.example .dev.vars   # set APP_SECRET to 32+ random characters
-npm run dev                       # http://localhost:5173
+bun run dev                       # http://localhost:5173
 ```
 
 On localhost, **Continue as developer** signs you in without Google. On localhost, Beep Me polls `getUpdates` to link Telegram, because Telegram cannot reach a local webhook.
 
 | Command | Does |
 | --- | --- |
-| `npm run dev` | Runs the Worker and the dashboard with hot reload (Vite and workerd) |
-| `npm run build` | Builds the Worker and the dashboard into `dist/` |
-| `npm run typecheck` | Type-checks the Worker, the dashboard, and the config |
-| `npm run check:docs` | Checks the docs pages: missing pages, unknown components, and broken links |
-| `npm run deploy` | Builds and deploys with Wrangler |
+| `bun run dev` | Runs the Worker and the dashboard with hot reload (Vite and workerd) |
+| `bun run build` | Builds the Worker and the dashboard into `dist/` |
+| `bun run typecheck` | Type-checks the Worker, the dashboard, and the config |
+| `bun run check:docs` | Checks the docs pages: missing pages, unknown components, and broken links |
+| `bun run deploy` | Builds and deploys with Wrangler |
 
 ## Project layout
 

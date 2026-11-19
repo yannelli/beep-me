@@ -40,8 +40,8 @@ function GoogleSetup({ redirectUri }: { redirectUri: string }) {
               {index === 2 && <CopyField value={redirectUri} label="redirect URI" multiline />}
               {index === 3 && (
                 <div className="space-y-2">
-                  <CopyField value="npx wrangler secret put GOOGLE_CLIENT_ID" label="command" multiline />
-                  <CopyField value="npx wrangler secret put GOOGLE_CLIENT_SECRET" label="command" multiline />
+                  <CopyField value="bunx wrangler secret put GOOGLE_CLIENT_ID" label="command" multiline />
+                  <CopyField value="bunx wrangler secret put GOOGLE_CLIENT_SECRET" label="command" multiline />
                 </div>
               )}
             </div>

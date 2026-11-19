@@ -34,7 +34,7 @@ What Beep Me relies on, checked against the installed packages and a local spike
 ## Wrangler
 
 - `wrangler types` generates `worker-configuration.d.ts` with runtime types; `@cloudflare/workers-types` is not needed.
-- Automatic resource provisioning (bindings without ids) is on by default since Wrangler 4.45 (open beta). Beep Me's `npm run setup` creates or finds the D1 database and KV namespace explicitly and writes the ids into `wrangler.jsonc`, because the Vite build copies the config into `dist/` and a write-back there would not persist.
+- Automatic resource provisioning (bindings without ids) is on by default since Wrangler 4.45 (open beta). Beep Me's `bun run setup` creates or finds the D1 database and KV namespace explicitly and writes the ids into `wrangler.jsonc`, because the Vite build copies the config into `dist/` and a write-back there would not persist.
 - `wrangler deploy --secrets-file <json>` uploads secrets with the version. `wrangler secret bulk` reads JSON from stdin.
 - Outbound TCP (`cloudflare:sockets`) blocks port 25. SMTP uses 465 (implicit TLS) or 587 (STARTTLS).
 

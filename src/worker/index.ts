@@ -41,7 +41,7 @@ function providerFor(origin: string): OAuthProvider<Env> {
 export default {
   async fetch(request, env, ctx) {
     if (!env.APP_SECRET || env.APP_SECRET.length < 32) {
-      return renderMessagePage("Finish setup", "Set APP_SECRET to a random value of 32 or more characters: npx wrangler secret put APP_SECRET", 500);
+      return renderMessagePage("Finish setup", "Set APP_SECRET to a random value of 32 or more characters: bunx wrangler secret put APP_SECRET", 500);
     }
     await ensureSchema(env.DB);
     return providerFor(publicOrigin(request, env)).fetch(request, env, ctx);

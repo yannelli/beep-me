@@ -4,12 +4,12 @@ Thanks for helping. This file covers setup, the commit format, and how releases 
 
 ## Setup
 
-Use Node.js 22 or later.
+Use Node.js 24 or later (`.nvmrc` pins 24) and [Bun](https://bun.sh) 1.2 or later. Bun installs the packages and runs the scripts. Vite and Wrangler run on Node.js.
 
 ```sh
-npm install
+bun install
 cp .dev.vars.example .dev.vars   # set APP_SECRET to 32+ random characters
-npm run dev                       # http://localhost:5173
+bun run dev                       # http://localhost:5173
 ```
 
 On localhost, **Continue as developer** signs you in without Google. [AGENTS.md](AGENTS.md) explains the layout and the rules for code, copy, and docs.
@@ -17,9 +17,9 @@ On localhost, **Continue as developer** signs you in without Google. [AGENTS.md]
 ## Before you open a pull request
 
 ```sh
-npm run typecheck
-npm run check:docs
-npm run build
+bun run typecheck
+bun run check:docs
+bun run build
 ```
 
 All three must pass. When you change behavior, update the docs page that describes it in `src/web/docs/content/`. See [docs/docs-site.md](docs/docs-site.md).
@@ -60,8 +60,8 @@ The compatibility surface includes the MCP tools and their fields, the REST API,
 The maintainer releases from a clean, up-to-date `main` checkout:
 
 ```sh
-npm run release -- --dry-run   # show the next version and notes
-npm run release                # bump package.json, update CHANGELOG.md, tag, push, publish the GitHub release
+bun run release --dry-run     # show the next version and notes
+bun run release               # bump package.json, update CHANGELOG.md, tag, push, publish the GitHub release
 ```
 
 `scripts/release.mjs` reads the commits since the latest `vX.Y.Z` tag, picks the bump from the table above, and stops when no commit calls for a release. It needs the GitHub CLI (`gh`) signed in.

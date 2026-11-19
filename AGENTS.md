@@ -6,10 +6,10 @@ Guide for coding agents working in this repo. Product overview: [README.md](READ
 
 | Command | Use |
 | --- | --- |
-| `npm run dev` | Worker + dashboard on http://localhost:5173 (Vite + workerd). "Continue as developer" signs in on localhost when `DEV_LOGIN=true` in `.dev.vars`. |
-| `npm run typecheck` | `tsc -b` for the Worker, dashboard, and Vite config. Must pass with zero errors. Run `npm run types` after you change `wrangler.jsonc`. |
-| `npm run build` | Production build into `dist/`. |
-| `npm run check:docs` | Checks the docs site pages. Run it after you change `src/web/docs/` or a behavior the docs describe. |
+| `bun run dev` | Worker + dashboard on http://localhost:5173 (Vite + workerd). "Continue as developer" signs in on localhost when `DEV_LOGIN=true` in `.dev.vars`. |
+| `bun run typecheck` | `tsc -b` for the Worker, dashboard, and Vite config. Must pass with zero errors. Run `bun run types` after you change `wrangler.jsonc`. |
+| `bun run build` | Production build into `dist/`. |
+| `bun run check:docs` | Checks the docs site pages. Run it after you change `src/web/docs/` or a behavior the docs describe. |
 
 Do not deploy, push, or run CI workflows unless the user asks. Fixture tests are planned after the user's review; do not add a test suite before then.
 
