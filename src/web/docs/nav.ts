@@ -25,6 +25,11 @@ export const DOC_SECTIONS: DocSection[] = [
     pages: [
       { slug: "agents/claude", title: "Claude", description: "Add Beep Me to Claude on the web, desktop, and mobile as a custom connector." },
       { slug: "agents/claude-code", title: "Claude Code", description: "Add Beep Me to Claude Code with one command." },
+      {
+        slug: "agents/plugin",
+        title: "Plugin for Claude Code, Codex, and pi",
+        description: "Answer permission prompts, questions, and plans on your phone, and get answers back to the agent.",
+      },
       { slug: "agents/other-clients", title: "Other MCP clients", description: "Connect any MCP client that supports remote servers." },
       { slug: "agents/scripts", title: "Scripts and CI", description: "Send messages from curl, cron jobs, and CI pipelines with an agent token." },
       { slug: "agents/replies", title: "Replies and questions", description: "Let agents ask you something, send files, and read your answers." },

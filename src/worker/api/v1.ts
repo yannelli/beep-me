@@ -3,6 +3,7 @@ import type { AppEnv } from "../auth/session";
 import { notify, notifyInputSchema, watchUrl } from "../core/notify";
 import { fetchReplies, interactionMedia, waitForAnswers } from "../core/replies";
 import { findAgentByToken, getAgent, touchAgent, type Agent } from "../db/agents";
+import { cancelFallbacks } from "../db/fallbacks";
 import { timingSafeEqual } from "../lib/crypto";
 import { getInteraction } from "../db/interactions";
 import { getUser } from "../db/users";
@@ -57,6 +58,17 @@ v1Routes.get("/watch/:messageId/:signature", async (c) => {
   const result = await waitForAnswers(c.env, c.get("origin"), { id: message.id, agentId: message.agent_id }, Number.isFinite(wait) ? wait : 0);
   c.header("cache-control", "no-store");
   return c.json({ message_id: message.id, ready: result.count > 0, count: result.count, waited_seconds: result.waitedSeconds });
+});
+
+/** POST /v1/messages/:id/fallbacks/cancel stops the waiting fallback steps of this agent's message. Same as cancel_fallbacks. */
+v1Routes.post("/messages/:messageId/fallbacks/cancel", async (c) => {
+  const agent = await tokenAgent(c);
+  if (!agent) return unauthorized(c);
+  const messageId = c.req.param("messageId");
+  const message = await c.env.DB.prepare("SELECT agent_id FROM messages WHERE id = ?").bind(messageId).first<{ agent_id: string | null }>();
+  if (!message || message.agent_id !== agent.id) return c.json({ error: "Not found" }, 404);
+  const canceled = await cancelFallbacks(c.env.DB, messageId, `${agent.name} canceled it.`);
+  return c.json({ canceled });
 });
 
 /** GET /v1/media/:interaction/:index streams a file the user sent back. Only the agent that owns the message can read it. */

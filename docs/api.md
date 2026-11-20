@@ -1,6 +1,6 @@
 # Dashboard API
 
-Created: 2026-11-18. Last updated: 2026-11-18.
+Created: 2026-11-18. Last updated: 2026-11-19.
 
 The dashboard talks to the Worker over same-origin JSON under `/api`. The session cookie authenticates each request. Mutating requests send `content-type: application/json`. Errors return `{ "error": string, "fields"?: Record<string, string> }`. Types live in [`src/shared/api.ts`](../src/shared/api.ts). Telnyx setup types live in [`src/shared/telnyx-setup.ts`](../src/shared/telnyx-setup.ts).
 
@@ -54,10 +54,11 @@ Every Resend setup POST without `confirm: true` changes nothing and returns 409 
 
 | Method | Path | Auth | Purpose |
 | --- | --- | --- | --- |
-| POST | `/mcp` | OAuth access token or `beep_` agent token | MCP Streamable HTTP endpoint |
+| POST | `/mcp` | OAuth access token or `beep_` agent token | MCP Streamable HTTP endpoint. With `X-Beep-Me-Plugin: 1` (sent by `plugins/beep-me`), `notify` text for a question says the plugin waits, in place of the watch loop. |
 | POST | `/v1/notify` | `Authorization: Bearer beep_…` | Send a notification from curl, CI, or cron |
 | GET | `/v1/replies` | `Authorization: Bearer beep_…` | Read answers to this agent's messages, with optional waiting |
 | GET | `/v1/media/:interaction/:index` | `Authorization: Bearer beep_…` | A file the user sent back to this agent |
+| POST | `/v1/messages/:id/fallbacks/cancel` | `Authorization: Bearer beep_…` | `{ canceled }`. Stops the waiting fallback steps of this agent's message, like `cancel_fallbacks`. 404 for another agent's message. |
 | GET | `/v1/watch/:message/:signature?wait_seconds` | The signed URL from `notify.watch_url` | `{ message_id, ready, count, waited_seconds }`. Waits up to 50 seconds for an unread answer. Returns no answer text. 401 when the agent was revoked. |
 
 `/v1/notify` and the MCP `notify` tool take the same body, including `channels`, `topic_thread`, and `fallbacks`. Fallback steps live in the `fallbacks` table (migration `0003`) and show on `MessageDTO.fallbacks`.

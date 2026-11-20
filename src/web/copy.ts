@@ -77,6 +77,11 @@ export const copy = {
     tokenOnce: "Copy this token now. Beep Me shows it only once.",
     tokenCurl: "Send a message with curl:",
     tokenMcp: "Or use the token with Claude Code:",
+    pluginIntro:
+      "The plugin sends permission prompts, questions, and plans from Claude Code to your phone. It brings your answers back to Claude Code, Codex, and pi. Make a token for it.",
+    pluginClaude: "Claude Code: run these commands in a terminal. Then restart Claude Code.",
+    pluginCodex: "Codex: add the two export lines to your shell profile. Then run the other commands.",
+    pluginPi: "pi: run these commands in pi, one at a time. Then run /reload.",
     revokeBody: "This agent loses access at once. It cannot send more messages.",
     deleteBody: "This removes the agent from the list. Its messages stay in Activity.",
     rotateBody: "The old token does not work after this. Update each script that uses it.",

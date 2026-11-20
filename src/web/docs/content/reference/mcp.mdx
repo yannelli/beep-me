@@ -17,6 +17,8 @@ The server is stateless. Beep Me builds a new server for each request, so no ses
 
 Beep Me checks the `Origin` header. A request from an origin other than the deployment address or localhost gets HTTP 403.
 
+The [Beep Me plugin](/docs/agents/plugin) sends the header `X-Beep-Me-Plugin: 1`. With this header, the `notify` text for a question tells the agent that the plugin waits for the answer, in place of the watch loop.
+
 ## Sign-in
 
 A client can sign in with OAuth, or send an agent token.

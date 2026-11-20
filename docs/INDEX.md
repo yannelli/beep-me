@@ -10,3 +10,4 @@ Created: 2026-11-18. Last updated: 2026-11-19.
 | [research/telegram-topics.md](research/telegram-topics.md) | You touch Telegram linking, topic threads, answers, files, or the webhook refresh after an update. Bot API facts and what is still unverified. |
 | [research/channel-providers.md](research/channel-providers.md) | You touch a channel adapter. Endpoints, auth, limits, and error shapes per provider. |
 | [research/cli-and-deploy.md](research/cli-and-deploy.md) | You touch `scripts/cli/`, the deploy overlay in `vite.config.ts`, or custom domains. Vite plugin config override, Wrangler account and config behavior, custom domain conflicts, zone access, and the Worker settings API. |
+| [research/agent-plugins.md](research/agent-plugins.md) | You touch `plugins/beep-me/` or the marketplace files. Claude Code, Codex, and pi hook behavior, plugin manifests, user options, and what was tested. |

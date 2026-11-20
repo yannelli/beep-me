@@ -36,7 +36,8 @@ export async function handleMcp(request: Request, env: Env, ctx: ProviderContext
   if (!agent || !user || agent.userId !== user.id) return unauthorized(origin, "Unknown agent");
   if (agent.status !== "active") return unauthorized(origin, "Access for this agent was revoked");
   ctx.waitUntil(touchAgent(env.DB, agent.id, request.headers.get("user-agent")));
-  const session: McpSession = { env, origin, waitUntil: (promise) => ctx.waitUntil(promise), user, agent };
+  const plugin = request.headers.has("x-beep-me-plugin");
+  const session: McpSession = { env, origin, waitUntil: (promise) => ctx.waitUntil(promise), user, agent, plugin };
   return mcp.fetch(request, {
     authInfo: { token: "", clientId: ctx.auth?.clientId ?? agent.id, scopes: ctx.auth?.scope ?? ["notify"], extra: { session } },
   });

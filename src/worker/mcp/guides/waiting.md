@@ -4,6 +4,7 @@ Each `get_replies` call costs tokens, even when nothing arrived. Pick the cheape
 
 | Situation | Do this |
 | --- | --- |
+| The Beep Me plugin runs in your client (the session start or the notify result says so). | Nothing. Keep working or end your turn. The plugin sends you the answer. |
 | You have other work to do. | Keep working. Call `get_replies` with `wait_seconds: 0` between steps. |
 | The answer comes in a minute or two, and you are blocked. | Call `get_replies` with `wait_seconds: 50`. Repeat 2 or 3 times at most. |
 | The answer can take a long time, and you have a shell. | Run the watch loop below. It costs no tokens while it waits. |

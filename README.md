@@ -117,10 +117,27 @@ The Worker applies the database schema on the first request. `bunx wrangler d1 m
 | --- | --- |
 | Claude (web, desktop, mobile) | Open Customize > Connectors. Select + Add, then Add custom connector. Paste `https://<your-worker>/mcp`. Keep the recommended sign-in options. Sign in. Choose the agent's limits. |
 | Claude Code | Run `claude mcp add --transport http --scope user beep-me https://<your-worker>/mcp`. Then run `/mcp` in Claude Code to sign in. |
+| Claude Code, Codex, pi (plugin) | Install the Beep Me plugin from this repository's marketplace. See [The plugin](#the-plugin-for-claude-code-codex-and-pi). |
 | Other MCP clients | Use the same URL. The client signs in with OAuth at the first connection. |
 | Scripts, cron, CI, headless agents | Create a token under **Agents**. Use it as a Bearer token on `/mcp` or `/v1/notify`. |
 
 Each OAuth connection shows an approval page. On this page, you set the agent name, its highest priority, and its channels.
+
+### The plugin for Claude Code, Codex, and pi
+
+`plugins/beep-me` adds hooks to Claude Code, Codex, and pi. Create a token under **Agents > Connect > Plugin**. The tab shows the commands with your URL and token filled in.
+
+- In Claude Code, permission prompts, `AskUserQuestion` questions, and plans go to your phone when nobody answers in the terminal for 15 seconds. The first answer wins: the terminal or your phone.
+- When an agent asks something with `notify`, the plugin waits for your answer at no token cost. In Claude Code and pi, the answer wakes the agent, also when the session is idle. In Codex, the session continues with your answer when the turn ends.
+- In Codex, approval requests can go to your phone too. Set `BEEPME_PROMPTS=on`.
+
+```sh
+claude plugin marketplace add yannelli/beep-me
+claude plugin install beep-me@beep-me
+echo '{"url":"https://<your-worker>/mcp","token":"beep_..."}' | claude plugin configure beep-me@beep-me --values-stdin
+```
+
+Codex uses `codex plugin marketplace add yannelli/beep-me` and `codex plugin add beep-me@beep-me`, with `BEEPME_URL` and `BEEPME_TOKEN` in your shell profile. pi uses `/claude:plugin install yannelli/beep-me`. Each deployment documents the plugin at `/docs/agents/plugin`.
 
 ### REST
 
@@ -151,7 +168,7 @@ curl "https://<your-worker>/v1/replies?message_id=<id>&wait_seconds=30" \
 | `notification_status` | Shows where a message from this agent went, its SMS delivery receipts, its answer count, and its fallback steps. |
 | `get_replies` | Returns what you sent back: text replies, choices, reactions, and files. Each answer has `from` (the channel and how Beep Me matched it) and `in_reply_to` (the message and every channel it went to). Inputs: `message_id`, `since`, `wait_seconds` (up to 50), `include_read`, `limit`. Marks the answers read. |
 | `list_channels` | Lists the channels the agent can use, with ids, kinds, topic threads, and how you can answer on each. |
-| `cancel_fallbacks` | Stops the waiting fallback steps of a message. |
+| `cancel_fallbacks` | Stops the waiting fallback steps of a message. `POST /v1/messages/<id>/fallbacks/cancel` does the same with a token. |
 | `help` | Guides with examples: overview, notify, channels, topics, replies, waiting, fallbacks, examples. |
 
 Beep Me also serves three skills (`beep-me-notify`, `beep-me-ask-and-wait`, `beep-me-fallbacks`) through the MCP skills extension and as prompts. `beep-me-ask-and-wait` shows agents how to wait for your answer with a shell loop on the watch URL, so the wait costs no tokens.
@@ -209,6 +226,7 @@ src/worker/     The Worker: MCP server, OAuth, routing, channels, JSON API
 src/web/        The dashboard (React 19, Tailwind CSS 4)
   docs/         The docs site at /docs: nav.ts, MDX pages in content/, components
 scripts/cli/    The setup and management CLI (bun run cli)
+plugins/beep-me/ The plugin for Claude Code, Codex, and pi: hooks and their Node.js scripts
 migrations/     D1 schema
 docs/           API reference and research notes (start at docs/INDEX.md)
 ```
